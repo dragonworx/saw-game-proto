@@ -1,0 +1,102 @@
+html * {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #666;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+#main {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#autoFocus {
+  position: absolute;
+  left: -10000px;
+}
+
+#gameView-container {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  bottom: 10px;
+  right: 10px;
+  background-color: #555;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#gameView {
+  --canvas-width: 500px;
+  --canvas-height: 500px;
+  width: var(--canvas-width);
+  height: var(--canvas-height);
+  background-color: #000;
+  box-shadow: 1px 3px 5px 5px rgb(0 0 0 / 30%);
+  position: relative;
+}
+
+#gameView canvas,
+#sprites {
+  position: absolute;
+  width: var(--canvas-width);
+  height: var(--canvas-height);
+  top: 0;
+  left: 0;
+}
+
+#gameView canvas {
+  background-color: transparent;
+}
+
+.sprite {
+  position: absolute;
+}
+
+.player {
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background-color: blue;
+}
+
+#fps {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 30px;
+  background-color: #666;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+button {
+  border: 1px solid #333;
+  border-radius: 5px;
+  background-color: #ccc;
+  font-size: 14px;
+  padding: 3px 8px;
+  color: #333;
+  cursor: pointer;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  border: none;
+}

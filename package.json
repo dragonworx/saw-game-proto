@@ -1,0 +1,29 @@
+{
+  "name": "socket-game",
+  "version": "1.0.0",
+  "main": "./server/index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "webpack serve",
+    "serve": "http-server ./public -p 80",
+    "build": "webpack --config webpack.config.js",
+    "build:watch": "webpack --config webpack.config.js --watch"
+  },
+  "dependencies": {
+    "@react-hook/throttle": "^2.2.0",
+    "eventemitter3": "^4.0.7",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.14",
+    "@types/react-dom": "^17.0.9",
+    "http-server": "^0.12.3",
+    "prettier": "^2.3.2",
+    "ts-loader": "^9.2.3",
+    "typescript": "^4.3.5",
+    "webpack": "^5.45.1",
+    "webpack-cli": "^4.7.2",
+    "webpack-dev-server": "^3.11.2"
+  }
+}
