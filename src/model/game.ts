@@ -5,6 +5,7 @@ import { Player } from "./player";
 import { Grid } from "./grid";
 
 export const GridSubDivisions = 20;
+export const PlayerSpeed = 0.1;
 
 export type Graphics = {
   fgCanvas: HTMLCanvasElement;
@@ -18,8 +19,6 @@ export type Size = {
   width: number;
   height: number;
 };
-
-export const PlayerSpeed = 0.05;
 
 export class Game extends EventEmitter {
   static instance: Game = new Game();
