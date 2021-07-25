@@ -4,8 +4,8 @@ import { throttled } from "../util";
 import { Player } from "./player";
 import { Grid } from "./grid";
 
-export const GridSubDivisions = 20;
-export const PlayerSpeed = 0.1;
+export const GridSubDivisions = 10;
+export const PlayerSpeed = 0.05;
 
 export type Graphics = {
   fgCanvas: HTMLCanvasElement;
@@ -77,11 +77,8 @@ export class Game extends EventEmitter {
 
   distributePlayerInitialPositions() {
     const player = this.userPlayer;
-    player.square = this.grid.rows[0][this.grid.rows.length / 2];
-    player.hPos = 0;
-    player.vPos = 0;
-    player.vector.x = 0;
-    player.vector.y = 1;
+    player.gridX = this.grid.hSubDiv / 2;
+    player.setVector(0, 1);
   }
 
   addPlayerElementsToSprites() {
@@ -92,14 +89,7 @@ export class Game extends EventEmitter {
   }
 
   setPlayerInitialPositions() {
-    this.players.forEach((player) => this.setPlayerPosition(player));
-  }
-
-  setPlayerPosition(player: Player) {
-    const element = player.element;
-    const { x, y } = this.grid.getPosition(player);
-    element.style.left = `${x}px`;
-    element.style.top = `${y}px`;
+    this.players.forEach((player) => player.moveToPositionOnGrid(this.grid));
   }
 
   onKeyDown = (e: KeyEvent) => {
@@ -122,8 +112,7 @@ export class Game extends EventEmitter {
   update() {
     this.players.forEach((player) => {
       player.move(PlayerSpeed);
-      player.turn();
-      this.setPlayerPosition(player);
+      player.moveToPositionOnGrid(this.grid);
     });
   }
 
@@ -133,12 +122,12 @@ export class Game extends EventEmitter {
   }
 
   renderFg() {
-    const { fgCtx: ctx, fgCanvas } = this.graphics;
-    const { left, top, width, height } = this.grid.getSquareBounds(
-      this.userPlayer.square
-    );
-    ctx.clearRect(0, 0, this.size.width, this.size.height);
-    ctx.fillStyle = "red";
-    ctx.fillRect(left, top, width, height);
+    // const { fgCtx: ctx, fgCanvas } = this.graphics;
+    // const { left, top, width, height } = this.grid.getSquareBounds(
+    //   this.userPlayer.square
+    // );
+    // ctx.clearRect(0, 0, this.size.width, this.size.height);
+    // ctx.fillStyle = "red";
+    // ctx.fillRect(left, top, width, height);
   }
 }
