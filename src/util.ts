@@ -10,6 +10,13 @@ export function getIsAdmin() {
   return false;
 }
 
+export function randomRgb() {
+  const r = Math.round(Math.random() * 255);
+  const g = Math.round(Math.random() * 255);
+  const b = Math.round(Math.random() * 255);
+  return `rgb(${r},${g},${b})`;
+}
+
 export function throttled(fn: Function, delay: number) {
   let lastCall = 0;
   return function (...args: any[]) {

@@ -80,14 +80,39 @@ export class Game extends EventEmitter {
   reset() {
     this.distributePlayerInitialPositions();
     this.addPlayerElementsToSprites();
-    this.setPlayerInitialPositions();
+    this.setPlayersInitialPositions();
   }
 
   distributePlayerInitialPositions() {
-    const player = this.userPlayer;
-    player.gridX = this.grid.hSubDiv / 2;
-    player.setVector(0, 1);
+    this.setPlayerInitialPosition(
+      this.userPlayer,
+      this.grid.hSubDiv,
+      this.grid.vSubDiv / 2,
+      -1,
+      0
+    );
   }
+
+  setPlayerInitialPosition(
+    player: Player,
+    gridXIndex: number,
+    gridYIndex: number,
+    vectorX: number,
+    vectorY: number
+  ) {
+    player.gridXIndex = gridXIndex;
+    player.gridYIndex = gridYIndex;
+    player.setVector(vectorX, vectorY);
+    this.grid.beginCut(player);
+    player
+      .on(
+        "moveToNextGridByVector",
+        this.grid.onPlayerMovedToNextGridByCurrentVector
+      )
+      .on("changeVector", this.grid.onPlayerChangedVector);
+  }
+
+  onPlayerMoved = (player: Player) => {};
 
   addPlayerElementsToSprites() {
     const { sprites } = this.graphics;
@@ -96,8 +121,8 @@ export class Game extends EventEmitter {
     });
   }
 
-  setPlayerInitialPositions() {
-    this.players.forEach((player) => player.moveToPositionOnGrid(this.grid));
+  setPlayersInitialPositions() {
+    this.players.forEach((player) => player.setToCurrentPosition(this.grid));
   }
 
   onKeyDown = (e: KeyEvent) => {
@@ -133,7 +158,7 @@ export class Game extends EventEmitter {
   update() {
     this.players.forEach((player) => {
       player.move(PlayerSpeed);
-      player.moveToPositionOnGrid(this.grid);
+      player.setToCurrentPosition(this.grid);
     });
   }
 
@@ -147,5 +172,8 @@ export class Game extends EventEmitter {
     this.grid.render(ctx);
   }
 
-  renderFg() {}
+  renderFg() {
+    const { bgCtx: ctx } = this.graphics;
+    this.grid.renderCuts(ctx);
+  }
 }
