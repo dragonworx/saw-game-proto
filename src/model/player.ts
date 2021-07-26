@@ -1,8 +1,12 @@
 import { EventEmitter } from "eventemitter3";
 import { Grid } from "./grid";
-import { Segment } from "./segment";
 
 export type SquareKey = "left" | "right" | "top" | "bottom";
+
+export interface Point {
+  x: number;
+  y: number;
+}
 
 export class Player extends EventEmitter {
   gridXIndex: number = 0;
@@ -13,7 +17,11 @@ export class Player extends EventEmitter {
   vectorY: number = 0;
   element: HTMLDivElement;
   nextMove: string = "";
-  segment?: Segment;
+  currentPosX: number = -1;
+  currentPosY: number = -1;
+  lastPosX: number = -1;
+  lastPosY: number = -1;
+  cutPoints: Point[] = [];
 
   constructor() {
     super();
@@ -58,15 +66,7 @@ export class Player extends EventEmitter {
   }
 
   setToCurrentPosition(grid: Grid) {
-    const {
-      hPos,
-      vPos,
-      vectorX,
-      vectorY,
-      gridXIndex: gridX,
-      gridYIndex: gridY,
-      element,
-    } = this;
+    const { hPos, vPos, gridXIndex: gridX, gridYIndex: gridY, element } = this;
     const { squareWidth, squareHeight } = grid;
     let x = gridX * squareWidth;
     let y = gridY * squareHeight;
@@ -83,6 +83,15 @@ export class Player extends EventEmitter {
     }
     element.style.left = `${x}px`;
     element.style.top = `${y}px`;
+    if (this.currentPosX === -1 && this.currentPosY === -1) {
+      this.lastPosX = x;
+      this.lastPosY = y;
+    } else {
+      this.lastPosX = this.currentPosX;
+      this.lastPosY = this.currentPosY;
+    }
+    this.currentPosX = x;
+    this.currentPosY = y;
   }
 
   move(speed: number) {
@@ -100,6 +109,9 @@ export class Player extends EventEmitter {
             this.setVector(1, 0);
             this.emit("changeVector", this);
           }
+          this.clearInput();
+        } else {
+          this.emit("moveToNextGridByVector", this);
         }
       }
     } else if (this.isHorizontalMovement) {
@@ -115,6 +127,9 @@ export class Player extends EventEmitter {
             this.setVector(0, 1);
             this.emit("changeVector", this);
           }
+          this.clearInput();
+        } else {
+          this.emit("moveToNextGridByVector", this);
         }
       }
     }
@@ -124,11 +139,19 @@ export class Player extends EventEmitter {
     this.gridXIndex += this.vectorX;
     this.gridYIndex += this.vectorY;
     this.hPos = this.vPos = 0;
-    this.emit("moveToNextGridByVector", this);
   }
 
   setVector(x: number, y: number) {
     this.vectorX = x;
     this.vectorY = y;
+  }
+
+  clearCutPoints() {
+    this.cutPoints = [];
+  }
+
+  newCutPointAtCurrentPosition() {
+    const { currentPosX, currentPosY } = this;
+    this.cutPoints.push({ x: currentPosX, y: currentPosY });
   }
 }

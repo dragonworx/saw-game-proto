@@ -6,7 +6,7 @@ import { Grid } from "./grid";
 import { perlin_noise } from "../util";
 
 export const GridSubDivisions = 10;
-export const PlayerSpeed = 0.01;
+export const PlayerSpeed = 0.02;
 
 export type Graphics = {
   fgCanvas: HTMLCanvasElement;
@@ -63,6 +63,7 @@ export class Game extends EventEmitter {
   init(size: Size, graphics: Graphics) {
     this.size = size;
     this.graphics = graphics;
+    graphics.fgCtx.translate(0.5, 0.5);
     this.grid.init(size.width, size.height);
     this.renderBg();
     this.start();
@@ -103,16 +104,17 @@ export class Game extends EventEmitter {
     player.gridXIndex = gridXIndex;
     player.gridYIndex = gridYIndex;
     player.setVector(vectorX, vectorY);
-    this.grid.beginCut(player);
     player
       .on(
         "moveToNextGridByVector",
         this.grid.onPlayerMovedToNextGridByCurrentVector
       )
-      .on("changeVector", this.grid.onPlayerChangedVector);
+      .on("changeVector", (player) => {
+        // player.move(PlayerSpeed);
+        // player.setToCurrentPosition(this.grid);
+        this.grid.onPlayerChangedVector(player);
+      });
   }
-
-  onPlayerMoved = (player: Player) => {};
 
   addPlayerElementsToSprites() {
     const { sprites } = this.graphics;
@@ -122,9 +124,12 @@ export class Game extends EventEmitter {
   }
 
   setPlayersInitialPositions() {
-    this.players.forEach((player) => player.setToCurrentPosition(this.grid));
+    this.players.forEach((player) => {
+      player.setToCurrentPosition(this.grid);
+      player.clearCutPoints();
+      player.newCutPointAtCurrentPosition();
+    });
   }
-
   onKeyDown = (e: KeyEvent) => {
     if (AcceptPlayerInput.includes(e.code)) {
       this.userPlayer.setNextMove(e.code);
@@ -159,7 +164,53 @@ export class Game extends EventEmitter {
     this.players.forEach((player) => {
       player.move(PlayerSpeed);
       player.setToCurrentPosition(this.grid);
+
+      const { fgCtx: ctx } = this.graphics;
+      const { lastPosX, lastPosY, currentPosX, currentPosY, vectorX, vectorY } =
+        player;
+      const deltaX = Math.abs(lastPosX - currentPosX);
+      const deltaY = Math.abs(lastPosY - currentPosY);
+      if (
+        (player.isHorizontalMovement && deltaX === 0) ||
+        (player.isVerticalMovement && deltaY === 0)
+      ) {
+        console.log("no delta");
+      } else {
+        ctx.strokeStyle = "red";
+        ctx.beginPath();
+        ctx.moveTo(lastPosX, lastPosY);
+        ctx.lineTo(currentPosX, currentPosY);
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      this.checkForCutIntersection(player);
     });
+  }
+
+  checkForCutIntersection(player: Player) {
+    const { fgCtx: ctx } = this.graphics;
+    const { currentPosX, currentPosY } = player;
+    const p = ctx.getImageData(currentPosX, currentPosY, 1, 1).data;
+    if (p[0] === 255) {
+      console.log("intersection");
+      this.closeCut(player);
+    }
+  }
+
+  closeCut(player: Player) {
+    const { fgCtx: ctx } = this.graphics;
+    const { cutPoints } = player;
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.moveTo(cutPoints[0].x, cutPoints[0].y);
+    for (let i = 1; i < cutPoints.length; i++) {
+      ctx.lineTo(cutPoints[i].x, cutPoints[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    player.clearCutPoints();
+    player.newCutPointAtCurrentPosition();
   }
 
   renderBg() {
@@ -173,7 +224,24 @@ export class Game extends EventEmitter {
   }
 
   renderFg() {
-    const { bgCtx: ctx } = this.graphics;
-    this.grid.renderCuts(ctx);
+    // const { fgCtx: ctx, bgCtx } = this.graphics;
+    // this.players.forEach((player) => {
+    //   const { lastPosX, lastPosY, currentPosX, currentPosY, vectorX, vectorY } =
+    //     player;
+    //   ctx.strokeStyle = "red";
+    //   ctx.lineWidth = 5;
+    //   ctx.beginPath();
+    //   ctx.moveTo(lastPosX, lastPosY);
+    //   ctx.lineTo(currentPosX - vectorX, currentPosY - vectorY);
+    //   ctx.stroke();
+    //   ctx.closePath();
+    //   player.cutPoints.forEach((point) => {
+    //     ctx.strokeStyle = "yellow";
+    //     bgCtx.beginPath();
+    //     bgCtx.arc(point.x, point.y, 6, 0, 6.28319);
+    //     bgCtx.stroke();
+    //     bgCtx.closePath();
+    //   });
+    // });
   }
 }

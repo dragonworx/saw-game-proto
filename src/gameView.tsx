@@ -12,8 +12,8 @@ export function GameView() {
     const element = document.getElementById("gameView")!;
     const width = getCSSVar(element, "--canvas-width");
     const height = getCSSVar(element, "--canvas-height");
-    const fgCanvas = document.getElementById("canvas-bg") as HTMLCanvasElement;
-    const bgCanvas = document.getElementById("canvas-fg") as HTMLCanvasElement;
+    const fgCanvas = document.getElementById("canvas-fg") as HTMLCanvasElement;
+    const bgCanvas = document.getElementById("canvas-bg") as HTMLCanvasElement;
     fgCanvas.width = bgCanvas.width = width;
     fgCanvas.height = bgCanvas.height = height;
     game.init(
