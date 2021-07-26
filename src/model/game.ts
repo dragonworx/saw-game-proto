@@ -3,9 +3,10 @@ import { InputManager, KeyEvent } from "../inputManager";
 import { throttled } from "../util";
 import { Player } from "./player";
 import { Grid } from "./grid";
+import { perlin_noise } from "../util";
 
 export const GridSubDivisions = 10;
-export const PlayerSpeed = 0.05;
+export const PlayerSpeed = 0.01;
 
 export type Graphics = {
   fgCanvas: HTMLCanvasElement;
@@ -19,6 +20,13 @@ export type Size = {
   width: number;
   height: number;
 };
+
+export const AcceptPlayerInput = [
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+];
 
 export class Game extends EventEmitter {
   static instance: Game = new Game();
@@ -37,15 +45,11 @@ export class Game extends EventEmitter {
   };
   size: Size = { width: 0, height: 0 };
   lastTime: number = -1;
+  isRunning: boolean = true;
 
   constructor() {
     super();
-    this.inputManager = new InputManager([
-      "ArrowLeft",
-      "ArrowRight",
-      "ArrowUp",
-      "ArrowDown",
-    ]);
+    this.inputManager = new InputManager([...AcceptPlayerInput, "Space"]);
     this.grid = new Grid(GridSubDivisions, GridSubDivisions);
     this.inputManager.on("keydown", throttled(this.onKeyDown, 1000 / 60));
     const userPlayer = (this.userPlayer = new Player());
@@ -66,6 +70,10 @@ export class Game extends EventEmitter {
 
   start() {
     this.reset();
+    this.startAnimation();
+  }
+
+  startAnimation() {
     requestAnimationFrame(this.updateFrame);
   }
 
@@ -93,7 +101,18 @@ export class Game extends EventEmitter {
   }
 
   onKeyDown = (e: KeyEvent) => {
-    this.userPlayer.setNextMove(e.code);
+    if (AcceptPlayerInput.includes(e.code)) {
+      this.userPlayer.setNextMove(e.code);
+    } else {
+      switch (e.code) {
+        case "Space":
+          this.isRunning = !this.isRunning;
+          if (this.isRunning) {
+            this.startAnimation();
+          }
+          break;
+      }
+    }
   };
 
   updateFrame = (currentTime: number) => {
@@ -106,7 +125,9 @@ export class Game extends EventEmitter {
     this.update();
     this.renderFg();
     this.lastTime = currentTime;
-    requestAnimationFrame(this.updateFrame);
+    if (this.isRunning) {
+      requestAnimationFrame(this.updateFrame);
+    }
   };
 
   update() {
@@ -117,17 +138,14 @@ export class Game extends EventEmitter {
   }
 
   renderBg() {
-    const { bgCtx: ctx } = this.graphics;
+    const { bgCtx: ctx, bgCanvas } = this.graphics;
+    perlin_noise(bgCanvas);
+    ctx.fillStyle = "darkGreen";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0, 0, this.size.width, this.size.height);
+    ctx.globalAlpha = 1;
     this.grid.render(ctx);
   }
 
-  renderFg() {
-    // const { fgCtx: ctx, fgCanvas } = this.graphics;
-    // const { left, top, width, height } = this.grid.getSquareBounds(
-    //   this.userPlayer.square
-    // );
-    // ctx.clearRect(0, 0, this.size.width, this.size.height);
-    // ctx.fillStyle = "red";
-    // ctx.fillRect(left, top, width, height);
-  }
+  renderFg() {}
 }

@@ -18,24 +18,35 @@ export class Grid {
     this.squareHeight = height / this.vSubDiv;
   }
 
-  render(ctx: CanvasRenderingContext2D) {
-    ctx.clearRect(0, 0, 100, 100);
-    ctx.strokeStyle = "#fff";
-    for (let y = 0; y < this.height; y += this.squareHeight) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(this.width, y);
+  render(
+    ctx: CanvasRenderingContext2D,
+    color: string = "#fff",
+    xOffset: number = 0,
+    yOffset: number = 0
+  ) {
+    const { squareWidth, squareHeight, width, height } = this;
+    ctx.strokeStyle = color;
+    for (let y = yOffset; y < height; y += squareHeight) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(width, y + 0.5);
       ctx.stroke();
-      for (let x = 0; x < this.width; x += this.squareWidth) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, this.height);
+      ctx.closePath();
+      for (let x = xOffset; x < width; x += squareWidth) {
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, height);
         ctx.stroke();
+        ctx.closePath();
       }
     }
-    ctx.moveTo(this.width - 1, 0);
-    ctx.lineTo(this.width - 1, this.height);
+    ctx.beginPath();
+    ctx.moveTo(width - 1, 0);
+    ctx.lineTo(width - 1, height);
     ctx.stroke();
-    ctx.moveTo(0, this.height - 1);
-    ctx.lineTo(this.width, this.height - 1);
+    ctx.moveTo(0, height - 1);
+    ctx.lineTo(width, height - 1);
     ctx.stroke();
+    ctx.closePath();
   }
 }

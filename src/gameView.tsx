@@ -1,7 +1,6 @@
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Game } from "./model/game";
-import { perlin_noise } from "./util";
 
 const game = Game.instance;
 
@@ -30,7 +29,6 @@ export function GameView() {
     setTimeout(() => {
       document.getElementById("autoFocus")?.focus();
     }, 0);
-    perlin_noise(fgCanvas);
   }, []);
 
   return (
