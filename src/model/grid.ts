@@ -1,5 +1,6 @@
 import { EventEmitter } from "eventemitter3";
 import { Player } from "./player";
+import { Buffer } from "./graphics";
 
 export class Grid extends EventEmitter {
   hSubDiv: number;
@@ -18,40 +19,42 @@ export class Grid extends EventEmitter {
   init(width: number, height: number) {
     this.width = width;
     this.height = height;
-    const squareWidth = (this.squareWidth = width / this.hSubDiv);
-    const squareHeight = (this.squareHeight = height / this.vSubDiv);
+    this.squareWidth = width / this.hSubDiv;
+    this.squareHeight = height / this.vSubDiv;
   }
 
-  render(
-    ctx: CanvasRenderingContext2D,
-    color: string = "#fff",
-    xOffset: number = 0,
-    yOffset: number = 0
-  ) {
+  getPosition(player: Player) {
+    const { squareWidth, squareHeight } = this;
+    const { hPos, vPos, gridXIndex, gridYIndex } = player;
+    let x = gridXIndex * squareWidth;
+    let y = gridYIndex * squareHeight;
+    const xt = squareWidth * hPos;
+    const yt = squareHeight * vPos;
+    if (player.isMovingLeft) {
+      x -= xt;
+    } else if (player.isMovingRight) {
+      x += xt;
+    } else if (player.isMovingUp) {
+      y -= yt;
+    } else if (player.isMovingDown) {
+      y += yt;
+    }
+    return [x, y];
+  }
+
+  render(buffer: Buffer) {
     const { squareWidth, squareHeight, width, height } = this;
-    ctx.strokeStyle = color;
-    for (let y = yOffset; y < height; y += squareHeight) {
-      ctx.beginPath();
-      ctx.moveTo(0, y + 0.5);
-      ctx.lineTo(width, y + 0.5);
-      ctx.stroke();
-      ctx.closePath();
-      for (let x = xOffset; x < width; x += squareWidth) {
-        ctx.beginPath();
-        ctx.moveTo(x + 0.5, 0);
-        ctx.lineTo(x + 0.5, height);
-        ctx.stroke();
-        ctx.closePath();
+    const color = { r: 255, g: 255, b: 255 };
+    buffer.getImageData();
+    for (let y = 0; y <= height; y += squareHeight) {
+      buffer.drawHorizontalLine(0, width, y, color);
+      for (let x = 0; x <= width; x += squareWidth) {
+        buffer.drawVerticalLine(0, height, x, color);
       }
     }
-    ctx.beginPath();
-    ctx.moveTo(width - 1, 0);
-    ctx.lineTo(width - 1, height);
-    ctx.stroke();
-    ctx.moveTo(0, height - 1);
-    ctx.lineTo(width, height - 1);
-    ctx.stroke();
-    ctx.closePath();
+    buffer.drawHorizontalLine(0, width, height - 1, color);
+    buffer.drawVerticalLine(0, height, width - 1, color);
+    buffer.updateImageData();
   }
 
   onPlayerMovedToNextGridByCurrentVector = (player: Player) => {

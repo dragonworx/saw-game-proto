@@ -3,23 +3,11 @@ import { InputManager, KeyEvent } from "../inputManager";
 import { throttled } from "../util";
 import { Player } from "./player";
 import { Grid } from "./grid";
+import { Graphics } from "./graphics";
 import { perlin_noise } from "../util";
 
 export const GridSubDivisions = 10;
-export const PlayerSpeed = 0.02;
-
-export type Graphics = {
-  fgCanvas: HTMLCanvasElement;
-  bgCanvas: HTMLCanvasElement;
-  fgCtx: CanvasRenderingContext2D;
-  bgCtx: CanvasRenderingContext2D;
-  sprites: HTMLDivElement;
-};
-
-export type Size = {
-  width: number;
-  height: number;
-};
+export const PlayerSpeed = 0.05;
 
 export const AcceptPlayerInput = [
   "ArrowLeft",
@@ -36,22 +24,23 @@ export class Game extends EventEmitter {
   grid: Grid;
 
   inputManager: InputManager;
-  graphics: Graphics = {
-    fgCanvas: {} as HTMLCanvasElement,
-    bgCanvas: {} as HTMLCanvasElement,
-    fgCtx: {} as CanvasRenderingContext2D,
-    bgCtx: {} as CanvasRenderingContext2D,
-    sprites: {} as HTMLDivElement,
-  };
-  size: Size = { width: 0, height: 0 };
+  graphics: Graphics;
+  spritesContainer?: HTMLDivElement;
+  width: number = 0;
+  height: number = 0;
   lastTime: number = -1;
   isRunning: boolean = true;
 
   constructor() {
     super();
-    this.inputManager = new InputManager([...AcceptPlayerInput, "Space"]);
+    this.inputManager = new InputManager([
+      ...AcceptPlayerInput,
+      "Space",
+      "Enter",
+    ]);
     this.grid = new Grid(GridSubDivisions, GridSubDivisions);
     this.inputManager.on("keydown", throttled(this.onKeyDown, 1000 / 60));
+    this.graphics = new Graphics();
     const userPlayer = (this.userPlayer = new Player());
     this.addPlayer(userPlayer);
   }
@@ -60,13 +49,23 @@ export class Game extends EventEmitter {
     this.players.push(player);
   }
 
-  init(size: Size, graphics: Graphics) {
-    this.size = size;
-    this.graphics = graphics;
-    graphics.fgCtx.translate(0.5, 0.5);
-    this.grid.init(size.width, size.height);
+  initGraphics(
+    width: number,
+    height: number,
+    graphicsContainer: HTMLDivElement
+  ) {
+    const { graphics, grid } = this;
+    grid.init(width, height);
+    graphics.setSize(width, height);
+    const { canvas: gridCanvas } = graphics.createBuffer("grid");
+    const { canvas: cutsCanvas } = graphics.createBuffer("cuts");
+    graphicsContainer.appendChild(gridCanvas);
+    graphicsContainer.appendChild(cutsCanvas);
     this.renderBg();
-    this.start();
+  }
+
+  setSpritesContainer(element: HTMLDivElement) {
+    this.spritesContainer = element;
   }
 
   start() {
@@ -101,35 +100,37 @@ export class Game extends EventEmitter {
     vectorX: number,
     vectorY: number
   ) {
+    const { grid } = this;
     player.gridXIndex = gridXIndex;
     player.gridYIndex = gridYIndex;
     player.setVector(vectorX, vectorY);
+    player.setInitialPosition(gridXIndex, gridYIndex, vectorX, vectorY, grid);
     player
-      .on(
-        "moveToNextGridByVector",
-        this.grid.onPlayerMovedToNextGridByCurrentVector
-      )
+      .on("moveToNextGridByVector", grid.onPlayerMovedToNextGridByCurrentVector)
       .on("changeVector", (player) => {
         // player.move(PlayerSpeed);
         // player.setToCurrentPosition(this.grid);
-        this.grid.onPlayerChangedVector(player);
+        grid.onPlayerChangedVector(player);
       });
   }
 
   addPlayerElementsToSprites() {
-    const { sprites } = this.graphics;
-    this.players.forEach((player) => {
-      sprites.appendChild(player.element);
-    });
+    const { spritesContainer } = this;
+    if (spritesContainer) {
+      this.players.forEach((player) => {
+        spritesContainer.appendChild(player.sprite);
+      });
+    }
   }
 
   setPlayersInitialPositions() {
     this.players.forEach((player) => {
-      player.setToCurrentPosition(this.grid);
+      player.setSpriteToCurrentPosition(this.grid);
       player.clearCutPoints();
       player.newCutPointAtCurrentPosition();
     });
   }
+
   onKeyDown = (e: KeyEvent) => {
     if (AcceptPlayerInput.includes(e.code)) {
       this.userPlayer.setNextMove(e.code);
@@ -141,6 +142,8 @@ export class Game extends EventEmitter {
             this.startAnimation();
           }
           break;
+        case "Enter":
+          this.updateFrame(0);
       }
     }
   };
@@ -152,96 +155,61 @@ export class Game extends EventEmitter {
     const deltaTime = currentTime - this.lastTime;
     const fps = Math.round(1000 / deltaTime);
     this.emit("fps", fps);
-    this.update();
-    this.renderFg();
+    this.updatePlayers();
     this.lastTime = currentTime;
     if (this.isRunning) {
       requestAnimationFrame(this.updateFrame);
     }
   };
 
-  update() {
+  updatePlayers() {
+    const { grid } = this;
     this.players.forEach((player) => {
+      player.markLastPos();
+      const { lastPosX } = player;
       player.move(PlayerSpeed);
-      player.setToCurrentPosition(this.grid);
-
-      const { fgCtx: ctx } = this.graphics;
-      const { lastPosX, lastPosY, currentPosX, currentPosY, vectorX, vectorY } =
-        player;
-      const deltaX = Math.abs(lastPosX - currentPosX);
-      const deltaY = Math.abs(lastPosY - currentPosY);
-      if (
-        (player.isHorizontalMovement && deltaX === 0) ||
-        (player.isVerticalMovement && deltaY === 0)
-      ) {
-        console.log("no delta");
-      } else {
-        ctx.strokeStyle = "red";
-        ctx.beginPath();
-        ctx.moveTo(lastPosX, lastPosY);
-        ctx.lineTo(currentPosX, currentPosY);
-        ctx.closePath();
-        ctx.stroke();
-      }
-
-      this.checkForCutIntersection(player);
+      player.setSpriteToCurrentPosition(grid);
+      const { currentPosX } = player;
+      const delta = Math.abs(currentPosX - lastPosX);
+      console.log(delta);
+      player.renderCurrentCutLine(this.graphics.getBuffer("cuts"));
+      // this.checkForCutIntersection(player);
     });
   }
 
-  checkForCutIntersection(player: Player) {
-    const { fgCtx: ctx } = this.graphics;
-    const { currentPosX, currentPosY } = player;
-    const p = ctx.getImageData(currentPosX, currentPosY, 1, 1).data;
-    if (p[0] === 255) {
-      console.log("intersection");
-      this.closeCut(player);
-    }
-  }
+  // checkForCutIntersection(player: Player) {
+  //   const { fgCtx: ctx } = this.graphics;
+  //   const { currentPosX, currentPosY } = player;
+  //   const p = ctx.getImageData(currentPosX, currentPosY, 1, 1).data;
+  //   if (p[0] === 255) {
+  //     console.log("intersection");
+  //     this.closeCut(player);
+  //   }
+  // }
 
   closeCut(player: Player) {
-    const { fgCtx: ctx } = this.graphics;
-    const { cutPoints } = player;
-    ctx.fillStyle = "#000";
-    ctx.beginPath();
-    ctx.moveTo(cutPoints[0].x, cutPoints[0].y);
-    for (let i = 1; i < cutPoints.length; i++) {
-      ctx.lineTo(cutPoints[i].x, cutPoints[i].y);
-    }
-    ctx.closePath();
-    ctx.fill();
-    player.clearCutPoints();
-    player.newCutPointAtCurrentPosition();
+    // const { fgCtx: ctx } = this.graphics;
+    // const { cutPoints } = player;
+    // ctx.fillStyle = "#000";
+    // ctx.beginPath();
+    // ctx.moveTo(cutPoints[0].x, cutPoints[0].y);
+    // for (let i = 1; i < cutPoints.length; i++) {
+    //   ctx.lineTo(cutPoints[i].x, cutPoints[i].y);
+    // }
+    // ctx.closePath();
+    // ctx.fill();
+    // player.clearCutPoints();
+    // player.newCutPointAtCurrentPosition();
   }
 
   renderBg() {
-    const { bgCtx: ctx, bgCanvas } = this.graphics;
-    perlin_noise(bgCanvas);
+    const buffer = this.graphics.getBuffer("grid");
+    const { ctx, canvas } = buffer;
+    perlin_noise(canvas);
     ctx.fillStyle = "darkGreen";
     ctx.globalAlpha = 0.5;
-    ctx.fillRect(0, 0, this.size.width, this.size.height);
+    ctx.fillRect(0, 0, this.width, this.height);
     ctx.globalAlpha = 1;
-    this.grid.render(ctx);
-  }
-
-  renderFg() {
-    // const { fgCtx: ctx, bgCtx } = this.graphics;
-    // this.players.forEach((player) => {
-    //   const { lastPosX, lastPosY, currentPosX, currentPosY, vectorX, vectorY } =
-    //     player;
-    //   ctx.strokeStyle = "red";
-    //   ctx.lineWidth = 5;
-    //   ctx.beginPath();
-    //   ctx.moveTo(lastPosX, lastPosY);
-    //   ctx.lineTo(currentPosX - vectorX, currentPosY - vectorY);
-    //   ctx.stroke();
-    //   ctx.closePath();
-    //   player.cutPoints.forEach((point) => {
-    //     ctx.strokeStyle = "yellow";
-    //     bgCtx.beginPath();
-    //     bgCtx.arc(point.x, point.y, 6, 0, 6.28319);
-    //     bgCtx.stroke();
-    //     bgCtx.closePath();
-    //   });
-    // });
+    this.grid.render(buffer);
   }
 }

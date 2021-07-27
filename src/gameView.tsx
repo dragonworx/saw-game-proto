@@ -4,38 +4,27 @@ import { Game } from "./model/game";
 
 const game = Game.instance;
 
-const getCSSVar = (element: HTMLElement, varName: string) =>
-  parseFloat(getComputedStyle(element).getPropertyValue(varName).trim());
-
 export function GameView() {
   useEffect(() => {
-    const element = document.getElementById("gameView")!;
-    const width = getCSSVar(element, "--canvas-width");
-    const height = getCSSVar(element, "--canvas-height");
-    const fgCanvas = document.getElementById("canvas-fg") as HTMLCanvasElement;
-    const bgCanvas = document.getElementById("canvas-bg") as HTMLCanvasElement;
-    fgCanvas.width = bgCanvas.width = width;
-    fgCanvas.height = bgCanvas.height = height;
-    game.init(
-      { width, height },
-      {
-        fgCanvas,
-        bgCanvas,
-        fgCtx: fgCanvas.getContext("2d")!,
-        bgCtx: bgCanvas.getContext("2d")!,
-        sprites: document.getElementById("sprites") as HTMLDivElement,
-      }
+    const graphicsContainer = document.getElementById(
+      "graphics"
+    ) as HTMLDivElement;
+    const width = graphicsContainer.offsetWidth;
+    const height = graphicsContainer.offsetHeight;
+    game.initGraphics(width, height, graphicsContainer);
+    game.setSpritesContainer(
+      document.getElementById("sprites") as HTMLDivElement
     );
     setTimeout(() => {
       document.getElementById("autoFocus")?.focus();
+      game.start();
     }, 0);
   }, []);
 
   return (
     <div id="gameView-container">
       <div id="gameView">
-        <canvas id="canvas-bg"></canvas>
-        <canvas id="canvas-fg"></canvas>
+        <div id="graphics"></div>
         <div id="sprites"></div>
         <input id="autoFocus" />
       </div>

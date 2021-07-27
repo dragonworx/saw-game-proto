@@ -1,5 +1,6 @@
 import { EventEmitter } from "eventemitter3";
 import { Grid } from "./grid";
+import { Buffer } from "./graphics";
 
 export type SquareKey = "left" | "right" | "top" | "bottom";
 
@@ -15,7 +16,7 @@ export class Player extends EventEmitter {
   vPos: number = 0;
   vectorX: number = 0;
   vectorY: number = 0;
-  element: HTMLDivElement;
+  sprite: HTMLDivElement;
   nextMove: string = "";
   currentPosX: number = -1;
   currentPosY: number = -1;
@@ -25,8 +26,8 @@ export class Player extends EventEmitter {
 
   constructor() {
     super();
-    const element = (this.element = document.createElement("div"));
-    element.classList.add("sprite", "player");
+    const sprite = (this.sprite = document.createElement("div"));
+    sprite.classList.add("sprite", "player");
   }
 
   setNextMove(keyCode: string) {
@@ -65,42 +66,37 @@ export class Player extends EventEmitter {
     return this.vectorY === 1;
   }
 
-  setToCurrentPosition(grid: Grid) {
-    const { hPos, vPos, gridXIndex: gridX, gridYIndex: gridY, element } = this;
-    const { squareWidth, squareHeight } = grid;
-    let x = gridX * squareWidth;
-    let y = gridY * squareHeight;
-    const xt = squareWidth * hPos;
-    const yt = squareHeight * vPos;
-    if (this.isMovingLeft) {
-      x -= xt;
-    } else if (this.isMovingRight) {
-      x += xt;
-    } else if (this.isMovingUp) {
-      y -= yt;
-    } else if (this.isMovingDown) {
-      y += yt;
-    }
-    element.style.left = `${x}px`;
-    element.style.top = `${y}px`;
-    if (this.currentPosX === -1 && this.currentPosY === -1) {
-      this.lastPosX = x;
-      this.lastPosY = y;
-    } else {
-      this.lastPosX = this.currentPosX;
-      this.lastPosY = this.currentPosY;
-    }
-    this.currentPosX = x;
-    this.currentPosY = y;
+  setInitialPosition(
+    gridXIndex: number,
+    gridYIndex: number,
+    vectorX: number,
+    vectorY: number,
+    grid: Grid
+  ) {
+    this.hPos = 0;
+    this.vPos = 0;
+    this.gridXIndex = gridXIndex;
+    this.gridYIndex = gridYIndex;
+    this.vectorX = vectorX;
+    this.vectorY = vectorY;
+    const [x, y] = grid.getPosition(this);
+    this.lastPosX = this.currentPosX = x;
+    this.lastPosY = this.currentPosY = y;
+  }
+
+  markLastPos() {
+    this.lastPosX = this.currentPosX;
+    this.lastPosY = this.currentPosY;
   }
 
   move(speed: number) {
-    const { nextMove, vectorX, vectorY } = this;
+    const { nextMove } = this;
     if (this.isVerticalMovement) {
       const vPos = this.vPos + speed;
       this.vPos = Math.min(1, vPos);
       if (vPos > 1) {
         this.moveToNextGridIndexByVector();
+        // todo: add overflow to position? what if > next grid (ie. overflow > 1)?
         if (this.hasInput) {
           if (nextMove === "ArrowLeft") {
             this.setVector(-1, 0);
@@ -146,6 +142,15 @@ export class Player extends EventEmitter {
     this.vectorY = y;
   }
 
+  setSpriteToCurrentPosition(grid: Grid) {
+    const { sprite } = this;
+    const [x, y] = grid.getPosition(this);
+    sprite.style.left = `${x}px`;
+    sprite.style.top = `${y}px`;
+    this.currentPosX = x;
+    this.currentPosY = y;
+  }
+
   clearCutPoints() {
     this.cutPoints = [];
   }
@@ -153,5 +158,18 @@ export class Player extends EventEmitter {
   newCutPointAtCurrentPosition() {
     const { currentPosX, currentPosY } = this;
     this.cutPoints.push({ x: currentPosX, y: currentPosY });
+  }
+
+  renderCurrentCutLine(buffer: Buffer) {
+    const { lastPosX, lastPosY, currentPosX, currentPosY } = this;
+    const red = { r: 255, g: 0, b: 0 };
+    const green = { r: 0, g: 255, b: 0 };
+    if (this.isHorizontalMovement) {
+      buffer.drawHorizontalLine(lastPosX, currentPosX, currentPosY, red);
+      // buffer.setPixelAt(lastPosX, lastPosY, green);
+    } else {
+      buffer.drawVerticalLine(lastPosY, currentPosY, currentPosX, red);
+    }
+    buffer.updateImageData();
   }
 }
