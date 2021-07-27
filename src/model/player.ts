@@ -188,4 +188,15 @@ export class Player extends EventEmitter {
     }
     buffer.updateImageData();
   }
+
+  renderCutPoints(buffer: Buffer) {
+    const { ctx } = buffer;
+    this.cutPoints.forEach((point) => {
+      ctx.strokeStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 6, 0, 6.28319);
+      ctx.closePath();
+      ctx.stroke();
+    });
+  }
 }

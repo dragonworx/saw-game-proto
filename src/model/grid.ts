@@ -54,12 +54,4 @@ export class Grid extends EventEmitter {
     buffer.drawVerticalLine(0, height, width - 1, color);
     buffer.updateImageData();
   }
-
-  onPlayerMovedToNextGridByCurrentVector = (player: Player) => {
-    player.newCutPointAtCurrentPosition();
-  };
-
-  onPlayerChangedVector = (player: Player) => {
-    player.newCutPointAtCurrentPosition();
-  };
 }

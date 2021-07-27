@@ -1,14 +1,15 @@
 import { EventEmitter } from "eventemitter3";
-import Polygon from "polygon";
+// import Polygon from "polygon";
 import { InputManager, KeyEvent } from "../inputManager";
 import { throttled } from "../util";
 import { Player } from "./player";
 import { Grid } from "./grid";
 import { Graphics } from "./graphics";
 import { perlin_noise } from "../util";
+import { createPolygon, scanlinePoly } from "./polygon";
 
 export const GridSubDivisions = 10;
-export const PlayerSpeed = 1;
+export const PlayerSpeed = 3;
 
 export const AcceptPlayerInput = [
   "ArrowLeft",
@@ -60,8 +61,10 @@ export class Game extends EventEmitter {
     graphics.setSize(width, height);
     const { canvas: gridCanvas } = graphics.createBuffer("grid");
     const { canvas: cutsCanvas } = graphics.createBuffer("cuts");
+    const { canvas: pointsCanvas } = graphics.createBuffer("points");
     graphicsContainer.appendChild(gridCanvas);
     graphicsContainer.appendChild(cutsCanvas);
+    graphicsContainer.appendChild(pointsCanvas);
     this.renderBg();
   }
 
@@ -107,8 +110,12 @@ export class Game extends EventEmitter {
     player.setVector(vectorX, vectorY);
     player.setInitialPosition(gridXIndex, gridYIndex, vectorX, vectorY, grid);
     player
-      .on("moveToNextGridByVector", grid.onPlayerMovedToNextGridByCurrentVector)
-      .on("changeVector", grid.onPlayerChangedVector);
+      .on("moveToNextGridByVector", (player) => {
+        player.newCutPointAtCurrentPosition();
+      })
+      .on("changeVector", (player) => {
+        player.newCutPointAtCurrentPosition();
+      });
   }
 
   addPlayerElementsToSprites() {
@@ -167,6 +174,7 @@ export class Game extends EventEmitter {
       player.setSpriteToCurrentPosition(grid);
       this.checkForCutIntersection(player);
       player.renderCurrentCutLine(this.graphics.getBuffer("cuts"));
+      player.renderCutPoints(this.graphics.getBuffer("points"));
     });
   }
 
@@ -181,27 +189,30 @@ export class Game extends EventEmitter {
   }
 
   closeCut(player: Player) {
-    const { ctx } = this.graphics.getBuffer("grid");
-    // const { cutPoints } = player;
+    const buffer = this.graphics.getBuffer("grid");
+    const { ctx } = buffer;
     player.newCutPointAtCurrentPosition();
 
-    const polygon = new Polygon(player.cutPoints);
-    // const intersections = polygon.selfIntersections();
-    // console.log(polygon);
-    // intersections.forEach((polygon) => {
-    const cutPoints = polygon.toArray();
-    ctx.fillStyle = "#000";
-    ctx.beginPath();
-    ctx.moveTo(cutPoints[0][0], cutPoints[0][1]);
-    for (let i = 1; i < cutPoints.length; i++) {
-      ctx.lineTo(cutPoints[i][0], cutPoints[i][1]);
-    }
-    ctx.closePath();
-    ctx.fill();
-    // });
+    //--
+    // const polygon = new Polygon(player.cutPoints);
+    // const cutPoints = polygon.toArray();
+    // ctx.fillStyle = "#000";
+    // ctx.beginPath();
+    // ctx.moveTo(cutPoints[0][0], cutPoints[0][1]);
+    // for (let i = 1; i < cutPoints.length; i++) {
+    //   ctx.lineTo(cutPoints[i][0], cutPoints[i][1]);
+    // }
+    // ctx.closePath();
+    // ctx.fill();
+    //--
+
+    const polygon = createPolygon(player.cutPoints);
+    scanlinePoly(ctx, polygon, "#000");
 
     player.clearCutPoints();
     player.newCutPointAtCurrentPosition();
+    this.graphics.getBuffer("cuts").clear();
+    this.graphics.getBuffer("points").clear();
   }
 
   renderBg() {
