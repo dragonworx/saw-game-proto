@@ -1,4 +1,5 @@
 import { EventEmitter } from "eventemitter3";
+import Polygon from "polygon";
 import { InputManager, KeyEvent } from "../inputManager";
 import { throttled } from "../util";
 import { Player } from "./player";
@@ -181,16 +182,24 @@ export class Game extends EventEmitter {
 
   closeCut(player: Player) {
     const { ctx } = this.graphics.getBuffer("grid");
-    const { cutPoints } = player;
+    // const { cutPoints } = player;
     player.newCutPointAtCurrentPosition();
+
+    const polygon = new Polygon(player.cutPoints);
+    // const intersections = polygon.selfIntersections();
+    // console.log(polygon);
+    // intersections.forEach((polygon) => {
+    const cutPoints = polygon.toArray();
     ctx.fillStyle = "#000";
     ctx.beginPath();
-    ctx.moveTo(cutPoints[0].x, cutPoints[0].y);
+    ctx.moveTo(cutPoints[0][0], cutPoints[0][1]);
     for (let i = 1; i < cutPoints.length; i++) {
-      ctx.lineTo(cutPoints[i].x, cutPoints[i].y);
+      ctx.lineTo(cutPoints[i][0], cutPoints[i][1]);
     }
     ctx.closePath();
     ctx.fill();
+    // });
+
     player.clearCutPoints();
     player.newCutPointAtCurrentPosition();
   }

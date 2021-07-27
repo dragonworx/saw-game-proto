@@ -9,7 +9,7 @@
     "allowJs": true,
     "moduleResolution": "node",
     "sourceMap": true,
-    "downlevelIteration": true
-    // "allowSyntheticDefaultImports": true
+    "downlevelIteration": true,
+    "allowSyntheticDefaultImports": true
   }
 }
