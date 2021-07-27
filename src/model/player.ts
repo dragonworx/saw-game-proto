@@ -66,6 +66,13 @@ export class Player extends EventEmitter {
     return this.vectorY === 1;
   }
 
+  get isOnGridVertex() {
+    return (
+      (this.isVerticalMovement && this.vPos === 0) ||
+      (this.isHorizontalMovement && this.hPos === 0)
+    );
+  }
+
   setInitialPosition(
     gridXIndex: number,
     gridYIndex: number,
@@ -89,14 +96,14 @@ export class Player extends EventEmitter {
     this.lastPosY = this.currentPosY;
   }
 
-  move(speed: number) {
+  move(speed: number, grid: Grid) {
+    const { squareWidth, squareHeight } = grid;
     const { nextMove } = this;
     if (this.isVerticalMovement) {
       const vPos = this.vPos + speed;
-      this.vPos = Math.min(1, vPos);
-      if (vPos > 1) {
+      this.vPos = Math.min(squareHeight, vPos);
+      if (vPos > squareHeight) {
         this.moveToNextGridIndexByVector();
-        // todo: add overflow to position? what if > next grid (ie. overflow > 1)?
         if (this.hasInput) {
           if (nextMove === "ArrowLeft") {
             this.setVector(-1, 0);
@@ -112,8 +119,8 @@ export class Player extends EventEmitter {
       }
     } else if (this.isHorizontalMovement) {
       const hPos = this.hPos + speed;
-      this.hPos = Math.min(1, hPos);
-      if (hPos > 1) {
+      this.hPos = Math.min(squareWidth, hPos);
+      if (hPos > squareWidth) {
         this.moveToNextGridIndexByVector();
         if (this.hasInput) {
           if (nextMove === "ArrowUp") {
@@ -161,14 +168,23 @@ export class Player extends EventEmitter {
   }
 
   renderCurrentCutLine(buffer: Buffer) {
-    const { lastPosX, lastPosY, currentPosX, currentPosY } = this;
-    const red = { r: 255, g: 0, b: 0 };
-    const green = { r: 0, g: 255, b: 0 };
+    const { lastPosX, lastPosY, currentPosX, currentPosY, vectorX, vectorY } =
+      this;
+    const red = [255, 0, 0];
     if (this.isHorizontalMovement) {
-      buffer.drawHorizontalLine(lastPosX, currentPosX, currentPosY, red);
-      // buffer.setPixelAt(lastPosX, lastPosY, green);
+      buffer.drawHorizontalLine(
+        lastPosX,
+        currentPosX - vectorX,
+        currentPosY,
+        red
+      );
     } else {
-      buffer.drawVerticalLine(lastPosY, currentPosY, currentPosX, red);
+      buffer.drawVerticalLine(
+        lastPosY,
+        currentPosY - vectorY,
+        currentPosX,
+        red
+      );
     }
     buffer.updateImageData();
   }

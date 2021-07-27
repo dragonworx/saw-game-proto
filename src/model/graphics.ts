@@ -22,12 +22,7 @@ export class Graphics {
   }
 }
 
-export type RGBA = {
-  r: number;
-  g: number;
-  b: number;
-  a?: number;
-};
+export type RGBA = number[];
 
 export class Buffer {
   width: number;
@@ -53,17 +48,12 @@ export class Buffer {
     const green = imageData.data[redIndex + 1];
     const blue = imageData.data[redIndex + 2];
     const alpha = imageData.data[redIndex + 3];
-    return {
-      r: red,
-      g: green,
-      b: blue,
-      a: alpha,
-    } as RGBA;
+    return [red, green, blue, alpha];
   }
 
   setPixelAt(x: number, y: number, rgba: RGBA) {
     const { imageData } = this;
-    const { r, g, b, a = 255 } = rgba;
+    const [r, g, b, a = 255] = rgba;
     const redIndex = y * (this.width * 4) + x * 4;
     imageData.data[redIndex] = r;
     imageData.data[redIndex + 1] = g;

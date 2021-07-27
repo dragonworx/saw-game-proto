@@ -28,23 +28,21 @@ export class Grid extends EventEmitter {
     const { hPos, vPos, gridXIndex, gridYIndex } = player;
     let x = gridXIndex * squareWidth;
     let y = gridYIndex * squareHeight;
-    const xt = squareWidth * hPos;
-    const yt = squareHeight * vPos;
     if (player.isMovingLeft) {
-      x -= xt;
+      x -= hPos;
     } else if (player.isMovingRight) {
-      x += xt;
+      x += hPos;
     } else if (player.isMovingUp) {
-      y -= yt;
+      y -= vPos;
     } else if (player.isMovingDown) {
-      y += yt;
+      y += vPos;
     }
     return [x, y];
   }
 
   render(buffer: Buffer) {
     const { squareWidth, squareHeight, width, height } = this;
-    const color = { r: 255, g: 255, b: 255 };
+    const color = [255, 255, 255];
     buffer.getImageData();
     for (let y = 0; y <= height; y += squareHeight) {
       buffer.drawHorizontalLine(0, width, y, color);

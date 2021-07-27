@@ -7,7 +7,7 @@ import { Graphics } from "./graphics";
 import { perlin_noise } from "../util";
 
 export const GridSubDivisions = 10;
-export const PlayerSpeed = 0.05;
+export const PlayerSpeed = 1;
 
 export const AcceptPlayerInput = [
   "ArrowLeft",
@@ -107,11 +107,7 @@ export class Game extends EventEmitter {
     player.setInitialPosition(gridXIndex, gridYIndex, vectorX, vectorY, grid);
     player
       .on("moveToNextGridByVector", grid.onPlayerMovedToNextGridByCurrentVector)
-      .on("changeVector", (player) => {
-        // player.move(PlayerSpeed);
-        // player.setToCurrentPosition(this.grid);
-        grid.onPlayerChangedVector(player);
-      });
+      .on("changeVector", grid.onPlayerChangedVector);
   }
 
   addPlayerElementsToSprites() {
@@ -166,40 +162,37 @@ export class Game extends EventEmitter {
     const { grid } = this;
     this.players.forEach((player) => {
       player.markLastPos();
-      const { lastPosX } = player;
-      player.move(PlayerSpeed);
+      player.move(PlayerSpeed, grid);
       player.setSpriteToCurrentPosition(grid);
-      const { currentPosX } = player;
-      const delta = Math.abs(currentPosX - lastPosX);
-      console.log(delta);
+      this.checkForCutIntersection(player);
       player.renderCurrentCutLine(this.graphics.getBuffer("cuts"));
-      // this.checkForCutIntersection(player);
     });
   }
 
-  // checkForCutIntersection(player: Player) {
-  //   const { fgCtx: ctx } = this.graphics;
-  //   const { currentPosX, currentPosY } = player;
-  //   const p = ctx.getImageData(currentPosX, currentPosY, 1, 1).data;
-  //   if (p[0] === 255) {
-  //     console.log("intersection");
-  //     this.closeCut(player);
-  //   }
-  // }
+  checkForCutIntersection(player: Player) {
+    const buffer = this.graphics.getBuffer("cuts");
+    const { currentPosX, currentPosY } = player;
+    const p = buffer.getPixelAt(currentPosX, currentPosY);
+    if (p[0] === 255) {
+      console.log("intersection");
+      this.closeCut(player);
+    }
+  }
 
   closeCut(player: Player) {
-    // const { fgCtx: ctx } = this.graphics;
-    // const { cutPoints } = player;
-    // ctx.fillStyle = "#000";
-    // ctx.beginPath();
-    // ctx.moveTo(cutPoints[0].x, cutPoints[0].y);
-    // for (let i = 1; i < cutPoints.length; i++) {
-    //   ctx.lineTo(cutPoints[i].x, cutPoints[i].y);
-    // }
-    // ctx.closePath();
-    // ctx.fill();
-    // player.clearCutPoints();
-    // player.newCutPointAtCurrentPosition();
+    const { ctx } = this.graphics.getBuffer("grid");
+    const { cutPoints } = player;
+    player.newCutPointAtCurrentPosition();
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.moveTo(cutPoints[0].x, cutPoints[0].y);
+    for (let i = 1; i < cutPoints.length; i++) {
+      ctx.lineTo(cutPoints[i].x, cutPoints[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    player.clearCutPoints();
+    player.newCutPointAtCurrentPosition();
   }
 
   renderBg() {
