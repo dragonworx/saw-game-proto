@@ -1,6 +1,6 @@
-import * as React from "react";
-import { GameView } from "./gameView";
-import { FPS } from "./fps";
+import * as React from 'react';
+import { GameView } from './gameView';
+import { FPS } from './fps';
 
 export function App() {
   return (

@@ -1,4 +1,4 @@
-import { EventEmitter } from "eventemitter3";
+import { EventEmitter } from 'eventemitter3';
 
 export interface KeyEvent {
   key: string;
@@ -13,8 +13,8 @@ export class InputManager extends EventEmitter {
     super();
     this.keysDown = new Map();
     this.accept = accept || [];
-    document.addEventListener("keydown", this.onKeyDown);
-    document.addEventListener("keyup", this.onKeyUp);
+    document.addEventListener('keydown', this.onKeyDown);
+    document.addEventListener('keyup', this.onKeyUp);
     requestAnimationFrame(this.updateFrame);
   }
 
@@ -39,7 +39,7 @@ export class InputManager extends EventEmitter {
       code: e.code,
     };
     this.keysDown.set(e.code, keyEvent);
-    this.emit("keydown", keyEvent);
+    this.emit('keydown', keyEvent);
   };
 
   onKeyUp = (e: KeyboardEvent) => {
@@ -47,7 +47,7 @@ export class InputManager extends EventEmitter {
       return;
     }
     this.keysDown.delete(e.code);
-    this.emit("keyup", {
+    this.emit('keyup', {
       key: e.key,
       code: e.code,
     });
@@ -55,7 +55,7 @@ export class InputManager extends EventEmitter {
 
   updateFrame = () => {
     this.keysDown.forEach((keyEvent) => {
-      this.emit("keypress", keyEvent);
+      this.emit('keypress', keyEvent);
     });
     requestAnimationFrame(this.updateFrame);
   };

@@ -1,22 +1,25 @@
-import { EventEmitter } from "eventemitter3";
-// import Polygon from "polygon";
-import { InputManager, KeyEvent } from "../inputManager";
-import { throttled } from "../util";
-import { Player } from "./player";
-import { Grid } from "./grid";
-import { Graphics } from "./graphics";
-import { perlin_noise } from "../util";
-import { createPolygon, scanlinePoly } from "./polygon";
+import { EventEmitter } from 'eventemitter3';
+import { InputManager, KeyEvent } from '../inputManager';
+import { throttled } from '../util';
+import { Player } from './player';
+import { Grid, GridBuffers } from './grid';
+import { createElement } from './util';
+import { CutLine } from './cutLine';
+import { Graphics } from './graphics';
 
 export const GridSubDivisions = 10;
 export const PlayerSpeed = 3;
 
 export const AcceptPlayerInput = [
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
 ];
+
+export enum GameBuffers {
+  Cuts = 'fgCuts',
+}
 
 export class Game extends EventEmitter {
   static instance: Game = new Game();
@@ -24,24 +27,24 @@ export class Game extends EventEmitter {
   players: Player[] = [];
   userPlayer: Player;
   grid: Grid;
-
   inputManager: InputManager;
-  graphics: Graphics;
-  spritesContainer?: HTMLDivElement;
+  spritesContainer: HTMLDivElement;
   width: number = 0;
   height: number = 0;
   lastTime: number = -1;
   isRunning: boolean = true;
+  graphics: Graphics;
 
   constructor() {
     super();
     this.inputManager = new InputManager([
       ...AcceptPlayerInput,
-      "Space",
-      "Enter",
+      'Space',
+      'Enter',
     ]);
+    this.spritesContainer = createElement('div', 'sprites');
     this.grid = new Grid(GridSubDivisions, GridSubDivisions);
-    this.inputManager.on("keydown", throttled(this.onKeyDown, 1000 / 60));
+    this.inputManager.on('keydown', throttled(this.onKeyDown, 1000 / 60));
     this.graphics = new Graphics();
     const userPlayer = (this.userPlayer = new Player());
     this.addPlayer(userPlayer);
@@ -49,23 +52,20 @@ export class Game extends EventEmitter {
 
   addPlayer(player: Player) {
     this.players.push(player);
+    this.grid.addCutLine(player.cutLine);
   }
 
-  initGraphics(
-    width: number,
-    height: number,
-    graphicsContainer: HTMLDivElement
-  ) {
-    const { graphics, grid } = this;
+  init(gameView: HTMLDivElement) {
+    const { grid, spritesContainer } = this;
+    const { offsetWidth: width, offsetHeight: height } = gameView;
     grid.init(width, height);
-    graphics.setSize(width, height);
-    const { canvas: gridCanvas } = graphics.createBuffer("grid");
-    const { canvas: cutsCanvas } = graphics.createBuffer("cuts");
-    const { canvas: pointsCanvas } = graphics.createBuffer("points");
-    graphicsContainer.appendChild(gridCanvas);
-    graphicsContainer.appendChild(cutsCanvas);
-    graphicsContainer.appendChild(pointsCanvas);
-    this.renderBg();
+    this.graphics.setSize(width, height);
+    this.graphics.createBuffer(GameBuffers.Cuts).setSize(width + 1, height + 1);
+    gameView.appendChild(grid.graphics.getCanvas(GridBuffers.Grid));
+    gameView.appendChild(grid.graphics.getCanvas(GridBuffers.Holes));
+    gameView.appendChild(this.graphics.getCanvas(GameBuffers.Cuts));
+    gameView.appendChild(spritesContainer);
+    this.grid.render();
   }
 
   setSpritesContainer(element: HTMLDivElement) {
@@ -78,10 +78,11 @@ export class Game extends EventEmitter {
   }
 
   startAnimation() {
-    requestAnimationFrame(this.updateFrame);
+    requestAnimationFrame(this.update);
   }
 
   reset() {
+    this.grid.clearCutLines();
     this.distributePlayerInitialPositions();
     this.addPlayerElementsToSprites();
     this.setPlayersInitialPositions();
@@ -90,8 +91,8 @@ export class Game extends EventEmitter {
   distributePlayerInitialPositions() {
     this.setPlayerInitialPosition(
       this.userPlayer,
-      this.grid.hSubDiv,
-      this.grid.vSubDiv / 2,
+      this.grid.hDivisions,
+      this.grid.vDivisions / 2,
       -1,
       0
     );
@@ -110,11 +111,17 @@ export class Game extends EventEmitter {
     player.setVector(vectorX, vectorY);
     player.setInitialPosition(gridXIndex, gridYIndex, vectorX, vectorY, grid);
     player
-      .on("moveToNextGridByVector", (player) => {
-        player.newCutPointAtCurrentPosition();
+      // .on('moveToNextGridByVector', (player: Player) => {
+      //   player.updatePosition(grid);
+      //   player.newCutPoint();
+      // })
+      .on('changeVector', (player: Player) => {
+        player.updatePosition(grid);
+        player.newCutPoint();
       })
-      .on("changeVector", (player) => {
-        player.newCutPointAtCurrentPosition();
+      .on('newCutPoint', (cutLine: CutLine) => {
+        grid.checkForCutIntersection(player);
+        cutLine.renderLines(grid.graphics.getBuffer(GridBuffers.Cuts));
       });
   }
 
@@ -128,10 +135,11 @@ export class Game extends EventEmitter {
   }
 
   setPlayersInitialPositions() {
+    const { grid } = this;
     this.players.forEach((player) => {
-      player.setSpriteToCurrentPosition(this.grid);
-      player.clearCutPoints();
-      player.newCutPointAtCurrentPosition();
+      player.updatePosition(grid);
+      player.setSpriteToCurrentPosition();
+      player.newCutPoint();
     });
   }
 
@@ -140,89 +148,40 @@ export class Game extends EventEmitter {
       this.userPlayer.setNextMove(e.code);
     } else {
       switch (e.code) {
-        case "Space":
+        case 'Space':
           this.isRunning = !this.isRunning;
           if (this.isRunning) {
             this.startAnimation();
           }
           break;
-        case "Enter":
-          this.updateFrame(0);
+        case 'Enter':
+          this.update(0);
       }
     }
   };
 
-  updateFrame = (currentTime: number) => {
+  update = (currentTime: number) => {
     if (this.lastTime === -1) {
       this.lastTime === currentTime;
     }
     const deltaTime = currentTime - this.lastTime;
     const fps = Math.round(1000 / deltaTime);
-    this.emit("fps", fps);
-    this.updatePlayers();
+    this.emit('fps', fps);
+    this.step();
     this.lastTime = currentTime;
     if (this.isRunning) {
-      requestAnimationFrame(this.updateFrame);
+      requestAnimationFrame(this.update);
     }
   };
 
-  updatePlayers() {
+  step() {
     const { grid } = this;
     this.players.forEach((player) => {
-      player.markLastPos();
       player.move(PlayerSpeed, grid);
-      player.setSpriteToCurrentPosition(grid);
-      this.checkForCutIntersection(player);
-      player.renderCurrentCutLine(this.graphics.getBuffer("cuts"));
-      player.renderCutPoints(this.graphics.getBuffer("points"));
+      player.updatePosition(grid);
+      player.setSpriteToCurrentPosition();
+      player.renderCutLine(this.graphics.getBuffer(GameBuffers.Cuts));
+      player.markLastPos();
     });
-  }
-
-  checkForCutIntersection(player: Player) {
-    const buffer = this.graphics.getBuffer("cuts");
-    const { currentPosX, currentPosY } = player;
-    const p = buffer.getPixelAt(currentPosX, currentPosY);
-    if (p[0] === 255) {
-      console.log("intersection");
-      this.closeCut(player);
-    }
-  }
-
-  closeCut(player: Player) {
-    const buffer = this.graphics.getBuffer("grid");
-    const { ctx } = buffer;
-    player.newCutPointAtCurrentPosition();
-
-    //--
-    // const polygon = new Polygon(player.cutPoints);
-    // const cutPoints = polygon.toArray();
-    // ctx.fillStyle = "#000";
-    // ctx.beginPath();
-    // ctx.moveTo(cutPoints[0][0], cutPoints[0][1]);
-    // for (let i = 1; i < cutPoints.length; i++) {
-    //   ctx.lineTo(cutPoints[i][0], cutPoints[i][1]);
-    // }
-    // ctx.closePath();
-    // ctx.fill();
-    //--
-
-    const polygon = createPolygon(player.cutPoints);
-    scanlinePoly(ctx, polygon, "#000");
-
-    player.clearCutPoints();
-    player.newCutPointAtCurrentPosition();
-    this.graphics.getBuffer("cuts").clear();
-    this.graphics.getBuffer("points").clear();
-  }
-
-  renderBg() {
-    const buffer = this.graphics.getBuffer("grid");
-    const { ctx, canvas } = buffer;
-    perlin_noise(canvas);
-    ctx.fillStyle = "darkGreen";
-    ctx.globalAlpha = 0.5;
-    ctx.fillRect(0, 0, this.width, this.height);
-    ctx.globalAlpha = 1;
-    this.grid.render(buffer);
   }
 }

@@ -1,11 +1,11 @@
 export function getIsAdmin() {
   const adminCookie = document.cookie
-    .split("; ")
+    .split('; ')
     .find((row) =>
-      row.startsWith("admin-358b2120-3ee5-4379-b05b-7c6b59097626=")
+      row.startsWith('admin-358b2120-3ee5-4379-b05b-7c6b59097626=')
     );
   if (adminCookie) {
-    return adminCookie.split("=")[1] === "true";
+    return adminCookie.split('=')[1] === 'true';
   }
   return false;
 }
@@ -42,7 +42,7 @@ export function randomNoise(
   width = width || canvas.width;
   height = height || canvas.height;
   alpha = alpha || 255;
-  var g = canvas.getContext("2d")!,
+  var g = canvas.getContext('2d')!,
     imageData = g.getImageData(x, y, width, height),
     random = Math.random,
     pixels = imageData.data,
@@ -57,9 +57,9 @@ export function randomNoise(
 }
 
 export function perlin_noise(canvas: HTMLCanvasElement) {
-  var canvas_ctx = canvas.getContext("2d")!,
-    offscreen = document.createElement("canvas"),
-    offscreen_ctx = offscreen.getContext("2d")!,
+  var canvas_ctx = canvas.getContext('2d')!,
+    offscreen = document.createElement('canvas'),
+    offscreen_ctx = offscreen.getContext('2d')!,
     saved_alpha = canvas_ctx.globalAlpha;
 
   /* Fill the offscreen buffer with random noise. */
