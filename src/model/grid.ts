@@ -4,6 +4,7 @@ import { Graphics } from './graphics';
 import { Color } from './util';
 import { CutLine } from './cutLine';
 import { perlin_noise } from '../util';
+import Polygon from 'polygon';
 
 export enum GridBuffers {
   Grid = 'grid',
@@ -102,13 +103,37 @@ export class Grid extends EventEmitter {
   }
 
   checkForCutIntersection(player: Player) {
-    const cutsBuffer = this.graphics.getBuffer(GridBuffers.Cuts);
-    const holesBuffer = this.graphics.getBuffer(GridBuffers.Holes);
+    const { graphics, cutLines } = this;
+    const cutsBuffer = graphics.getBuffer(GridBuffers.Cuts);
+    const holesBuffer = graphics.getBuffer(GridBuffers.Holes);
     const { x, y } = player;
     const p = cutsBuffer.getPixelAt(x, y);
     if (p[0] === 255) {
-      const intersectionPoints = player.cutLine.getIntersectionPoint(x, y);
-      holesBuffer.fillPolygon(intersectionPoints, 'rgba(0,0,0,0.2');
+      console.log('hit', cutLines.length);
+      for (let i = cutLines.length - 1; i >= 0; i--) {
+        const cutLine = cutLines[i];
+        console.log('!');
+        const intersectionIndex = cutLine.getIntersectionIndex(x, y);
+        if (intersectionIndex > -1) {
+          console.log('intersection');
+          const intersectionPoints =
+            cutLine.copyPointsFromIndex(intersectionIndex);
+          const polygon = new Polygon(intersectionPoints);
+          const area = polygon.area();
+          if (area === 0) {
+            console.log('nothing');
+          } else {
+            holesBuffer.fillPolygon(intersectionPoints, 'rgba(0,0,0,0.2');
+            break;
+          }
+        }
+      }
     }
+  }
+
+  newCutLine() {
+    const newCutLine = new CutLine();
+    this.cutLines.push(newCutLine);
+    return newCutLine;
   }
 }

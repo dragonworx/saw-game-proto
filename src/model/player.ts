@@ -1,5 +1,5 @@
 import { EventEmitter } from 'eventemitter3';
-import { Grid } from './grid';
+import { Grid, GridBuffers } from './grid';
 import { createElement } from './util';
 import { CutLine } from './cutLine';
 import { Buffer } from './buffer';
@@ -109,39 +109,35 @@ export class Player extends EventEmitter {
     if (this.isVerticalMovement) {
       this.vOffset = this.vOffset + speed;
       if (this.vOffset > squareHeight) {
-        this.moveToNextGridIndexByVector(grid);
+        const didWrap = this.moveToNextGridIndexByVector(grid);
         if (this.hasInput) {
           if (nextMove === 'ArrowLeft') {
             this.setVector(-1, 0);
-            this.emit('changeVector', this);
+            this.newCutPoint(grid);
           } else if (nextMove === 'ArrowRight') {
             this.setVector(1, 0);
-            this.emit('changeVector', this);
+            this.newCutPoint(grid);
           }
           this.clearInput();
         } else {
-          // this.emit('moveToNextGridByVector', this);
-          this.updatePosition(grid);
-          this.newCutPoint();
+          !didWrap && this.newCutPoint(grid);
         }
       }
     } else if (this.isHorizontalMovement) {
       this.hOffset = this.hOffset + speed;
       if (this.hOffset > squareWidth) {
-        this.moveToNextGridIndexByVector(grid);
+        const didWrap = this.moveToNextGridIndexByVector(grid);
         if (this.hasInput) {
           if (nextMove === 'ArrowUp') {
             this.setVector(0, -1);
-            this.emit('changeVector', this);
+            this.newCutPoint(grid);
           } else if (nextMove === 'ArrowDown') {
             this.setVector(0, 1);
-            this.emit('changeVector', this);
+            this.newCutPoint(grid);
           }
           this.clearInput();
         } else {
-          // this.emit('moveToNextGridByVector', this);
-          this.updatePosition(grid);
-          this.newCutPoint();
+          !didWrap && this.newCutPoint(grid);
         }
       }
     }
@@ -154,6 +150,7 @@ export class Player extends EventEmitter {
     let yIndex = gridYIndex + vectorY;
     const hasHMovement = hOffset > 0;
     const hasVMovement = vOffset > 0;
+
     const hasCrossedLeftBounds =
       xIndex === 0 && this.isMovingLeft && hasHMovement;
     const hasCrossedRightBounds =
@@ -161,6 +158,20 @@ export class Player extends EventEmitter {
     const hasCrossedTopBounds = yIndex === 0 && this.isMovingUp && hasVMovement;
     const hasCrossedBottomBounds =
       yIndex === vDivisions && this.isMovingDown && hasVMovement;
+    const didWrap =
+      hasCrossedLeftBounds ||
+      hasCrossedRightBounds ||
+      hasCrossedTopBounds ||
+      hasCrossedBottomBounds;
+
+    this.gridXIndex = xIndex;
+    this.gridYIndex = yIndex;
+    this.hOffset = this.vOffset = 0;
+
+    if (didWrap) {
+      this.newCutPoint(grid);
+    }
+
     if (hasCrossedLeftBounds) {
       xIndex = hDivisions;
     } else if (hasCrossedRightBounds) {
@@ -170,9 +181,22 @@ export class Player extends EventEmitter {
     } else if (hasCrossedBottomBounds) {
       yIndex = 0;
     }
+
     this.gridXIndex = xIndex;
     this.gridYIndex = yIndex;
-    this.hOffset = this.vOffset = 0;
+
+    if (didWrap) {
+      this.updatePosition(grid);
+      this.markLastPos();
+      this.trimCutLine(grid);
+    }
+
+    return didWrap;
+  }
+
+  trimCutLine(grid: Grid) {
+    this.cutLine = grid.newCutLine();
+    this.newCutPoint(grid);
   }
 
   setVector(x: number, y: number) {
@@ -181,9 +205,17 @@ export class Player extends EventEmitter {
     this.hOffset = this.vOffset = 0;
   }
 
-  newCutPoint() {
+  newCutPoint(grid: Grid) {
+    this.updatePosition(grid);
+    if (this.cutLine.points.length > 0) {
+      const lastPoint = this.cutLine.points[this.cutLine.points.length - 1];
+      if (lastPoint[0] === this.x && lastPoint[1] === this.y) {
+        return;
+      }
+    }
     this.cutLine.addPoint(this.x, this.y);
-    this.emit('newCutPoint', this.cutLine);
+    grid.checkForCutIntersection(this);
+    this.cutLine.renderLines(grid.graphics.getBuffer(GridBuffers.Cuts));
   }
 
   renderCutLine(buffer: Buffer) {

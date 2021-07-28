@@ -4,11 +4,10 @@ import { throttled } from '../util';
 import { Player } from './player';
 import { Grid, GridBuffers } from './grid';
 import { createElement } from './util';
-import { CutLine } from './cutLine';
 import { Graphics } from './graphics';
 
 export const GridSubDivisions = 10;
-export const PlayerSpeed = 3;
+export const PlayerSpeed = 2;
 
 export const AcceptPlayerInput = [
   'ArrowLeft',
@@ -63,6 +62,7 @@ export class Game extends EventEmitter {
     this.graphics.createBuffer(GameBuffers.Cuts).setSize(width + 1, height + 1);
     gameView.appendChild(grid.graphics.getCanvas(GridBuffers.Grid));
     gameView.appendChild(grid.graphics.getCanvas(GridBuffers.Holes));
+    gameView.appendChild(grid.graphics.getCanvas(GridBuffers.Cuts));
     gameView.appendChild(this.graphics.getCanvas(GameBuffers.Cuts));
     gameView.appendChild(spritesContainer);
     this.grid.render();
@@ -82,7 +82,7 @@ export class Game extends EventEmitter {
   }
 
   reset() {
-    this.grid.clearCutLines();
+    // this.grid.clearCutLines();
     this.distributePlayerInitialPositions();
     this.addPlayerElementsToSprites();
     this.setPlayersInitialPositions();
@@ -110,19 +110,6 @@ export class Game extends EventEmitter {
     player.gridYIndex = gridYIndex;
     player.setVector(vectorX, vectorY);
     player.setInitialPosition(gridXIndex, gridYIndex, vectorX, vectorY, grid);
-    player
-      // .on('moveToNextGridByVector', (player: Player) => {
-      //   player.updatePosition(grid);
-      //   player.newCutPoint();
-      // })
-      .on('changeVector', (player: Player) => {
-        player.updatePosition(grid);
-        player.newCutPoint();
-      })
-      .on('newCutPoint', (cutLine: CutLine) => {
-        grid.checkForCutIntersection(player);
-        cutLine.renderLines(grid.graphics.getBuffer(GridBuffers.Cuts));
-      });
   }
 
   addPlayerElementsToSprites() {
@@ -137,9 +124,8 @@ export class Game extends EventEmitter {
   setPlayersInitialPositions() {
     const { grid } = this;
     this.players.forEach((player) => {
-      player.updatePosition(grid);
+      player.newCutPoint(grid);
       player.setSpriteToCurrentPosition();
-      player.newCutPoint();
     });
   }
 
@@ -180,7 +166,7 @@ export class Game extends EventEmitter {
       player.move(PlayerSpeed, grid);
       player.updatePosition(grid);
       player.setSpriteToCurrentPosition();
-      player.renderCutLine(this.graphics.getBuffer(GameBuffers.Cuts));
+      // player.renderCutLine(this.graphics.getBuffer(GameBuffers.Cuts));
       player.markLastPos();
     });
   }

@@ -31,9 +31,12 @@ export class CutLine {
     buffer.updateImageData();
   }
 
-  getIntersectionPoint(x: number, y: number) {
+  getIntersectionIndex(x: number, y: number) {
     const { points } = this;
-    const index = points.findIndex((point) => point[0] === x && point[1] === y);
-    return points.slice(index);
+    return points.findIndex((point) => point[0] === x && point[1] === y);
+  }
+
+  copyPointsFromIndex(fromIndex: number) {
+    return this.points.slice(fromIndex);
   }
 }
