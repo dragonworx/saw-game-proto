@@ -52,6 +52,12 @@ export class Buffer {
     this.ctx.putImageData(this.imageData, 0, 0);
   }
 
+  batchImageDataOps(fn: () => void) {
+    this.getImageData();
+    fn();
+    this.updateImageData();
+  }
+
   drawHorizontalLine(x1: number, x2: number, y: number, color: Color) {
     const min = Math.min(x1, x2);
     const max = Math.max(x1, x2);
@@ -99,6 +105,15 @@ export class Buffer {
     ctx.arc(x, y, radius, 0, 6.28319);
     ctx.closePath();
     ctx.stroke();
+  }
+
+  fillRect(x: number, y: number, width: number, height: number, color: string) {
+    const { ctx } = this;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.rect(x, y, width, height);
+    ctx.closePath();
+    ctx.fill();
   }
 
   fillPolygon(points: Point[], color: string) {

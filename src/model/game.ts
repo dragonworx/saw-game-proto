@@ -4,13 +4,10 @@ import { Animator } from './animator';
 import { Player } from './player';
 import { createElement } from './util';
 import { Graphics } from './graphics';
+import { Grid, Buffers as GridBuffers } from './Grid';
 
-export const GridSubDivisions = 10;
-export const PlayerSpeed = 2;
-
-export enum GameBuffers {
-  Cuts = 'fgCuts',
-}
+export const GridSize = 20;
+export const PlayerSpeed = 5;
 
 export class Game {
   static instance: Game = new Game();
@@ -20,6 +17,7 @@ export class Game {
   animator: Animator;
   spritesContainer: HTMLDivElement;
   graphics: Graphics;
+  grid: Grid;
 
   constructor() {
     this.animator = new Animator(24);
@@ -38,17 +36,19 @@ export class Game {
       .on('keydown', this.onPlayerKeyInput);
     this.spritesContainer = createElement('div', 'sprites');
     this.graphics = new Graphics();
+    this.grid = new Grid(GridSize, GridSize);
   }
 
-  addPlayer(player: Player) {
-    this.players.push(player);
+  get userPlayer() {
+    return this.players[0];
   }
 
   start(gameView: HTMLDivElement) {
     const { spritesContainer } = this;
     const { offsetWidth: width, offsetHeight: height } = gameView;
+    this.grid.init(width, height);
     this.graphics.setSize(width, height);
-    this.graphics.createBuffer(GameBuffers.Cuts).setSize(width + 1, height + 1);
+    gameView.appendChild(this.grid.graphics.getBuffer(GridBuffers.Grid).canvas);
     gameView.appendChild(spritesContainer);
     this.reset();
     this.animator.start();
@@ -65,12 +65,18 @@ export class Game {
   }
 
   distributePlayerInitialPositions() {
-    //todo: enumerate all players and dsitribute evenly around edges
-    // this.setPlayerInitialPosition(this.userPlayer);
+    //todo: enumerate all players and distribute evenly around edges
+    const cell = this.grid.getCell(Math.floor(GridSize / 2), 0);
+    cell.render(
+      this.grid.graphics.getBuffer(GridBuffers.Grid),
+      'rgba(0,255,0,0.2)'
+    );
+    const edge = cell.left;
+    this.userPlayer.setEdge(edge, 1);
   }
 
-  setPlayerInitialPosition(player: Player) {
-    //todo: set player initial position settings
+  addPlayer(player: Player) {
+    this.players.push(player);
   }
 
   addPlayerElementsToSprites() {
@@ -105,10 +111,16 @@ export class Game {
   };
 
   step() {
-    const input = this.inputManager.getChannel('player1')?.pop();
-    if (input) {
-      console.log(input);
-    }
-    this.players.forEach((player) => {});
+    const userPlayer = this.userPlayer;
+    this.players.forEach((player) => {
+      player
+        .move(
+          PlayerSpeed,
+          player === userPlayer
+            ? this.inputManager.getChannel('player1')
+            : undefined
+        )
+        .setSpriteToCurrentPosition();
+    });
   }
 }

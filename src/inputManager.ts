@@ -26,7 +26,7 @@ export class InputManager {
   }
 
   getChannel(name: string) {
-    return this.channels.get(name);
+    return this.channels.get(name)!;
   }
 
   getChannelsForInput(e: KeyboardEvent) {

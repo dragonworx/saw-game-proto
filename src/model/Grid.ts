@@ -1,0 +1,391 @@
+import { Graphics } from './graphics';
+import { Buffer } from './buffer';
+import { Color } from './util';
+
+export enum Buffers {
+  Grid = 'grid',
+}
+
+export type Direction = -1 | 1;
+
+const vertexKey = (h: number, v: number) => `${h}:${v}`;
+
+const edgeKey = (fromVertexKey: string, toVertexKey: string) =>
+  `${fromVertexKey}-${toVertexKey}`;
+
+export class Grid {
+  hDivisions: number;
+  vDivisions: number;
+  width: number = 0;
+  height: number = 0;
+  cellWidth: number = 0;
+  cellHeight: number = 0;
+  cells: Cell[][] = [];
+  graphics: Graphics;
+  vertexMap: Map<string, Vertex> = new Map();
+  edgeMap: Map<string, Edge> = new Map();
+
+  constructor(hDivisions: number, vDivisions: number) {
+    this.hDivisions = hDivisions;
+    this.vDivisions = vDivisions;
+    this.graphics = new Graphics();
+    this.graphics.createBuffer(Buffers.Grid);
+  }
+
+  init(width: number, height: number) {
+    const { hDivisions, vDivisions, vertexMap, edgeMap } = this;
+    this.width = width;
+    this.height = height;
+    const cellWidth = (this.cellWidth = Math.floor(width / hDivisions));
+    const cellHeight = (this.cellHeight = Math.floor(height / vDivisions));
+    this.graphics.setSize(width + 1, height + 1);
+
+    // create vertexes
+    for (let v = 0; v <= vDivisions; v += 1) {
+      const y = v * cellHeight;
+      for (let h = 0; h <= hDivisions; h += 1) {
+        const x = h * cellWidth;
+        const vertex = new Vertex(x, y);
+        const key = vertexKey(h, v);
+        vertexMap.set(key, vertex);
+      }
+    }
+
+    // create edges
+    for (let v = 0; v < vDivisions; v += 1) {
+      for (let h = 0; h < hDivisions; h += 1) {
+        const topLeftVertexKey = vertexKey(h, v);
+        const topRightVertexKey = vertexKey(h + 1, v);
+        const bottomLeftVertexKey = vertexKey(h, v + 1);
+        const topLeftVertex = vertexMap.get(topLeftVertexKey)!;
+        const topRightVertex = vertexMap.get(topRightVertexKey)!;
+        const bottomLeftVertex = vertexMap.get(bottomLeftVertexKey)!;
+        const topEdge = new Edge(this, h, v, topLeftVertex, topRightVertex);
+        const leftEdge = new Edge(this, h, v, topLeftVertex, bottomLeftVertex);
+        const topEdgeKey = edgeKey(topLeftVertexKey, topRightVertexKey);
+        const leftEdgeKey = edgeKey(topLeftVertexKey, bottomLeftVertexKey);
+        edgeMap.set(topEdgeKey, topEdge);
+        edgeMap.set(leftEdgeKey, leftEdge);
+
+        if (v === vDivisions - 1) {
+          const bottomRightVertexKey = vertexKey(h + 1, v + 1);
+          const bottomRightVertex = vertexMap.get(bottomRightVertexKey)!;
+          const bottomEdge = new Edge(
+            this,
+            h,
+            v,
+            bottomLeftVertex,
+            bottomRightVertex
+          );
+          const bottomEdgeKey = edgeKey(
+            bottomLeftVertexKey,
+            bottomRightVertexKey
+          );
+          edgeMap.set(bottomEdgeKey, bottomEdge);
+        }
+      }
+
+      const topRightVertexKey = vertexKey(hDivisions, v);
+      const bottomRightVertexKey = vertexKey(hDivisions, v + 1);
+      const topRightVertex = vertexMap.get(topRightVertexKey)!;
+      const bottomRightVertex = vertexMap.get(bottomRightVertexKey)!;
+      const rightEdge = new Edge(
+        this,
+        hDivisions,
+        v,
+        topRightVertex,
+        bottomRightVertex
+      );
+      const rightEdgeKey = edgeKey(topRightVertexKey, bottomRightVertexKey);
+      edgeMap.set(rightEdgeKey, rightEdge);
+    }
+
+    // create cells
+    for (let v = 0; v < vDivisions; v += 1) {
+      const row: Cell[] = [];
+      for (let h = 0; h < hDivisions; h += 1) {
+        const topLeftVertexKey = vertexKey(h, v);
+        const topRightVertexKey = vertexKey(h + 1, v);
+        const bottomLeftVertexKey = vertexKey(h, v + 1);
+        const bottomRightVertexKey = vertexKey(h + 1, v + 1);
+        const topEdgeKey = edgeKey(topLeftVertexKey, topRightVertexKey);
+        const leftEdgeKey = edgeKey(topLeftVertexKey, bottomLeftVertexKey);
+        const rightEdgeKey = edgeKey(topRightVertexKey, bottomRightVertexKey);
+        const bottomEdgeKey = edgeKey(
+          bottomLeftVertexKey,
+          bottomRightVertexKey
+        );
+        const topEdge = edgeMap.get(topEdgeKey)!;
+        const leftEdge = edgeMap.get(leftEdgeKey)!;
+        const rightEdge = edgeMap.get(rightEdgeKey)!;
+        const bottomEdge = edgeMap.get(bottomEdgeKey)!;
+        const cell = new Cell(topEdge, leftEdge, rightEdge, bottomEdge);
+        row.push(cell);
+
+        if (h > 0) {
+          // link horizontal edges prev/next
+          topEdge.prev = edgeMap.get(
+            edgeKey(vertexKey(h - 1, v), vertexKey(h, v))
+          );
+          topEdge.prev!.next = topEdge;
+          bottomEdge.prev = edgeMap.get(
+            edgeKey(vertexKey(h - 1, v + 1), vertexKey(h, v + 1))
+          );
+          bottomEdge.prev!.next = bottomEdge;
+        }
+
+        if (v > 0) {
+          // link vertical edges above/below
+          leftEdge.above = edgeMap.get(
+            edgeKey(vertexKey(h, v - 1), vertexKey(h, v))
+          );
+          leftEdge.above!.below = leftEdge;
+          rightEdge.above = edgeMap.get(
+            edgeKey(vertexKey(h + 1, v - 1), vertexKey(h + 1, v))
+          );
+          rightEdge.above!.below = rightEdge;
+        }
+
+        // link vertex 4? edges
+        this.linkVertexToQuadEdges(h, v);
+        this.linkVertexToQuadEdges(h, v + 1);
+      }
+
+      this.linkVertexToQuadEdges(this.hDivisions, v);
+
+      this.cells.push(row);
+    }
+
+    this.linkVertexToQuadEdges(this.hDivisions, this.vDivisions);
+
+    this.renderGrid();
+  }
+
+  linkVertexToQuadEdges(h: number, v: number) {
+    const { vertexMap, edgeMap } = this;
+    const vertexCenterKey = vertexKey(h, v);
+    const vertexAboveKey = vertexKey(h, v - 1);
+    const vertexBelowKey = vertexKey(h, v + 1);
+    const vertexPrevKey = vertexKey(h - 1, v);
+    const vertexNextKey = vertexKey(h + 1, v);
+    const vertex = vertexMap.get(vertexCenterKey)!;
+    vertex.above = edgeMap.get(edgeKey(vertexAboveKey, vertexCenterKey));
+    vertex.below = edgeMap.get(edgeKey(vertexCenterKey, vertexBelowKey));
+    vertex.prev = edgeMap.get(edgeKey(vertexPrevKey, vertexCenterKey));
+    vertex.next = edgeMap.get(edgeKey(vertexCenterKey, vertexNextKey));
+  }
+
+  getCell(h: number, v: number) {
+    return this.cells[v][h];
+  }
+
+  renderGrid() {
+    const buffer = this.graphics.getBuffer(Buffers.Grid);
+    buffer.batchImageDataOps(() => {
+      const { hDivisions, vDivisions } = this;
+      for (let v = 0; v < vDivisions; v += 1) {
+        for (let h = 0; h < hDivisions; h += 1) {
+          const cell = this.cells[v][h];
+          cell.render(buffer);
+          if (h === hDivisions - 1) {
+            cell.right.render(buffer);
+          }
+          if (v === vDivisions - 1) {
+            cell.bottom.render(buffer);
+          }
+        }
+      }
+    });
+  }
+}
+
+export class Vertex {
+  x: number;
+  y: number;
+  above?: Edge;
+  below?: Edge;
+  prev?: Edge;
+  next?: Edge;
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+}
+
+export class Edge {
+  grid: Grid;
+  h: number;
+  v: number;
+  from: Vertex;
+  to: Vertex;
+  isCut: boolean = false;
+  above?: Edge;
+  below?: Edge;
+  prev?: Edge;
+  next?: Edge;
+
+  constructor(grid: Grid, h: number, v: number, from: Vertex, to: Vertex) {
+    this.grid = grid;
+    this.h = h;
+    this.v = v;
+    this.from = from;
+    this.to = to;
+  }
+
+  get isVertical() {
+    return this.from.x === this.to.x;
+  }
+
+  get isHorizontal() {
+    return this.from.y === this.to.y;
+  }
+
+  getPosition(direction: Direction, offset: number): [number, number, boolean] {
+    if (this.isVertical) {
+      if (direction === -1) {
+        return [
+          this.to.x,
+          this.to.y - offset,
+          this.to.y - (this.to.y - offset) > this.grid.cellHeight,
+        ];
+      } else {
+        return [
+          this.to.x,
+          this.from.y + offset,
+          this.from.y + offset - this.from.y > this.grid.cellHeight,
+        ];
+      }
+    } else {
+      if (direction === -1) {
+        return [
+          this.to.x - offset,
+          this.from.y,
+          this.to.x - (this.to.x - offset) > this.grid.cellWidth,
+        ];
+      } else {
+        return [
+          this.from.x + offset,
+          this.from.y,
+          this.from.x + offset - this.from.x > this.grid.cellWidth,
+        ];
+      }
+    }
+  }
+
+  getNextEdge(direction: Direction) {
+    if (this.isVertical) {
+      if (direction === -1) {
+        return this.above;
+      } else {
+        return this.below;
+      }
+    } else {
+      if (direction === -1) {
+        return this.prev;
+      } else {
+        return this.next;
+      }
+    }
+  }
+
+  getNextWrappedEdge(direction: Direction) {
+    const edge = this.getNextEdge(direction);
+    if (edge) {
+      return edge;
+    } else {
+      if (this.isVertical) {
+        if (direction === -1) {
+          return this.grid.edgeMap.get(
+            edgeKey(
+              vertexKey(this.h, this.grid.hDivisions - 1),
+              vertexKey(this.h, this.grid.hDivisions)
+            )
+          )!;
+        } else {
+          return this.grid.edgeMap.get(
+            edgeKey(vertexKey(this.h, 0), vertexKey(this.h, 1))
+          )!;
+        }
+      } else {
+        if (direction === -1) {
+          return this.grid.edgeMap.get(
+            edgeKey(
+              vertexKey(this.grid.hDivisions - 1, this.v),
+              vertexKey(this.grid.hDivisions, this.v)
+            )
+          )!;
+        } else {
+          return this.grid.edgeMap.get(
+            edgeKey(vertexKey(0, this.v), vertexKey(1, this.v))
+          )!;
+        }
+      }
+    }
+  }
+
+  getCell() {
+    return this.grid.getCell(this.h, this.v);
+  }
+
+  render(buffer: Buffer, color: Color = [0, 255, 255]) {
+    buffer.drawStraightLine(
+      this.from.x,
+      this.from.y,
+      this.to.x,
+      this.to.y,
+      color
+    );
+  }
+}
+
+export class Cell {
+  top: Edge;
+  left: Edge;
+  right: Edge;
+  bottom: Edge;
+
+  constructor(top: Edge, left: Edge, right: Edge, bottom: Edge) {
+    this.top = top;
+    this.left = left;
+    this.right = right;
+    this.bottom = bottom;
+  }
+
+  get topLeft() {
+    return this.top.from;
+  }
+
+  get topRight() {
+    return this.top.to;
+  }
+
+  get bottomLeft() {
+    return this.bottom.from;
+  }
+
+  get bottomRight() {
+    return this.bottom.to;
+  }
+
+  get bounds() {
+    const { topLeft, bottomRight, topRight } = this;
+    return {
+      x: topLeft.x,
+      y: topLeft.y,
+      width: topRight.x - topLeft.x,
+      height: bottomRight.y - topRight.y,
+    };
+  }
+
+  render(buffer: Buffer, fillColor?: string) {
+    if (fillColor) {
+      buffer.updateImageData();
+      const { x, y, width, height } = this.bounds;
+      buffer.fillRect(x, y, width, height, fillColor);
+      buffer.getImageData();
+    }
+    this.top.render(buffer);
+    this.left.render(buffer);
+  }
+}

@@ -3,8 +3,8 @@ import { Buffer } from './buffer';
 
 export class Graphics {
   container: HTMLDivElement;
-  width: number = 0;
-  height: number = 0;
+  width: number = 1;
+  height: number = 1;
   buffers: Map<string, Buffer> = new Map();
 
   constructor() {

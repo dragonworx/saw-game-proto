@@ -27,7 +27,7 @@ export class InputChannel extends EventEmitter {
     this.name = name;
     this.accept = accepts || [];
     this.bufferSize = bufferSize || 1;
-    this.bufferClearTimeoutMs = bufferClearTimeoutMs || 250;
+    this.bufferClearTimeoutMs = bufferClearTimeoutMs || 3000;
   }
 
   accepts(code: string) {
@@ -56,7 +56,7 @@ export class InputChannel extends EventEmitter {
     this.bufferClearTimeoutId = -1;
   };
 
-  peek() {
+  peek(): string | undefined {
     return this.buffer[this.buffer.length - 1];
   }
 

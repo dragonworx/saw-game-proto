@@ -36,7 +36,6 @@ export class Animator extends EventEmitter {
 
   onFrame = (elapsed: number) => {
     if (this.isRunning) {
-      console.log('!');
       if (this.lastTime > -1) {
         this.emit('frame', this.fps, elapsed);
       } else {

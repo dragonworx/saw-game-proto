@@ -64,6 +64,8 @@ body {
   margin-top: -5px;
   border-radius: 50%;
   border: 1px solid blue;
+  background-color: yellow;
+  opacity: 0.5;
 }
 
 #fps {
