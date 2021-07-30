@@ -6,12 +6,8 @@ const game = Game.instance;
 
 export function GameView() {
   useEffect(() => {
-    const gameView = document.getElementById('gameView') as HTMLDivElement;
-    game.init(gameView);
-    game.start();
-    setTimeout(() => {
-      document.getElementById('autoFocus')?.focus();
-    }, 0);
+    game.start(document.getElementById('gameView') as HTMLDivElement);
+    setTimeout(() => document.getElementById('autoFocus')?.focus(), 0);
   }, []);
 
   return (

@@ -5,9 +5,9 @@ import { Game } from './model/game';
 const game = Game.instance;
 
 export function FPS() {
-  const [fps, setFps] = useThrottle(0, 1);
+  const [fps, setFps] = useThrottle(0, game.animator.fps);
 
-  game.on('fps', (fps) => setFps(fps));
+  game.animator.on('frame', (fps) => setFps(fps));
 
   if (fps === 0) {
     return null;
