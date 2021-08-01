@@ -9,6 +9,7 @@ export class InputChannel<T> extends EventEmitter {
   buffer: T[] = [];
   bufferClearTimeoutMs: number;
   bufferClearTimeoutId: number = -1;
+  activeInput: Map<T, number> = new Map();
 
   constructor(
     name: string,
@@ -23,10 +24,35 @@ export class InputChannel<T> extends EventEmitter {
     this.bufferClearTimeoutMs = bufferClearTimeoutMs;
   }
 
+  get hasFilteredInput() {
+    return this.filter.length && this.activeInput.size > 0;
+  }
+
+  isInputActive(input: T) {
+    return this.activeInput.has(input);
+  }
+
   allowInput(input: T) {
     return this.filter.length
       ? !!this.filter.find((inputFilter) => input === inputFilter)
       : true;
+  }
+
+  activateInput(input: T) {
+    this.activeInput.set(input, Date.now());
+  }
+
+  deactivateInput(input: T) {
+    this.activeInput.delete(input);
+  }
+
+  getKeyPressDurationMs(input: T) {
+    if (this.isInputActive(input)) {
+      const now = Date.now();
+      const startTime = this.activeInput.get(input) || now;
+      return now - startTime;
+    }
+    return -1;
   }
 
   push(code: T) {
@@ -61,30 +87,24 @@ export class InputChannel<T> extends EventEmitter {
 }
 
 export class KeyboardInputChannel extends InputChannel<string> {
-  keysDown: Map<string, number> = new Map();
-
   onKeyDown(e: KeyboardEvent) {
-    this.keysDown.set(e.code, Date.now());
-    this.push(e.code);
-    this.emit('keydown', e.code);
+    const { code } = e;
+    this.activateInput(code);
+    this.push(code);
+    this.emit('keydown', code);
   }
 
   onKeyUp(e: KeyboardEvent) {
-    this.keysDown.delete(e.code);
-    this.emit('keyup', e.code);
+    const { code } = e;
+    this.activeInput.delete(code);
+    this.emit('keyup', code);
   }
 
   isKeyPressed(code: string) {
-    return this.keysDown.has(code);
-  }
-
-  getKeyPressDurationMs(code: string) {
-    const now = Date.now();
-    const startTime = this.keysDown.get(code) || now;
-    return now - startTime;
+    return this.isInputActive(code);
   }
 
   update() {
-    this.keysDown.forEach((_startTime, code) => this.emit('keypress', code));
+    this.activeInput.forEach((_startTime, code) => this.emit('keypress', code));
   }
 }

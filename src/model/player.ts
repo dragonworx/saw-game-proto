@@ -14,15 +14,13 @@ export class Player extends EventEmitter {
     super();
     this.sprite = createElement('div', undefined, ['sprite', 'player']);
     this.inputChannel = inputChannel;
+    // this.inputChannel.on('keypress', this.onKeyDown);
   }
 
-  setEdge(edge: Edge, direction?: Direction) {
-    this.edge = edge;
-    this.offset = 0;
-    if (direction !== undefined) {
-      this.direction = direction;
-    }
-  }
+  // onKeyDown = (code: string) => {
+  //   this.move(5);
+  //   this.setSpriteToCurrentPosition();
+  // };
 
   setSpriteToCurrentPosition() {
     const [x, y] = this.edge.getPosition(this.direction, this.offset);
@@ -98,6 +96,13 @@ export class Player extends EventEmitter {
     }
     this.edge.render(buffer, [255, 255, 255]);
     buffer.updateImageData();
-    return this;
+  }
+
+  setEdge(edge: Edge, direction?: Direction) {
+    this.edge = edge;
+    this.offset = 0;
+    if (direction !== undefined) {
+      this.direction = direction;
+    }
   }
 }

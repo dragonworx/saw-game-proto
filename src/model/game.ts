@@ -107,7 +107,8 @@ export class Game {
 
   step() {
     this.players.forEach((player) => {
-      player.move(PlayerSpeed).setSpriteToCurrentPosition();
+      player.move(PlayerSpeed);
+      player.setSpriteToCurrentPosition();
     });
   }
 }
