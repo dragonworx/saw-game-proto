@@ -1,13 +1,11 @@
 import { InputManager } from '../inputManager';
-import { KeyboardInputChannel } from '../inputChannel';
 import { Animator } from './animator';
 import { Player } from './player';
 import { createElement } from './util';
 import { Graphics } from './graphics';
 import { Grid, Buffers as GridBuffers } from './Grid';
 
-export const GridSize = 20;
-export const PlayerSpeed = 5;
+export const GridSize = 7;
 
 export class Game {
   static instance: Game = new Game();
@@ -20,7 +18,7 @@ export class Game {
   grid: Grid;
 
   constructor() {
-    this.animator = new Animator(24);
+    this.animator = new Animator(10);
     this.animator.on('frame', this.onFrame);
     this.inputManager = new InputManager();
     this.inputManager
@@ -107,7 +105,7 @@ export class Game {
 
   step() {
     this.players.forEach((player) => {
-      player.move(PlayerSpeed);
+      player.move();
       player.setSpriteToCurrentPosition();
     });
   }
