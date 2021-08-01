@@ -3,7 +3,7 @@ import { Animator } from './animator';
 import { Player } from './player';
 import { createElement } from './util';
 import { Graphics } from './graphics';
-import { Grid, Buffers as GridBuffers } from './Grid';
+import { Grid, Buffers as GridBuffers, Direction } from './Grid';
 
 export const GridSize = 10;
 
@@ -22,22 +22,22 @@ export class Game {
     this.animator.on('frame', this.onFrame);
     this.inputManager = new InputManager();
     this.inputManager
-      .createKeyboardChannel('general', ['Space', 'Enter'])
+      .createKeyboardChannel(
+        new Map(
+          Object.entries({
+            Space: 'Space',
+            Enter: 'Enter',
+          })
+        )
+      )
       .on('keydown', this.onGeneralKeyInput);
     this.spritesContainer = createElement('div', 'sprites');
     this.graphics = new Graphics();
     this.grid = new Grid(GridSize, GridSize);
   }
 
-  get userPlayer() {
-    return this.players[0];
-  }
-
-  newKeyboardPlayer(filter: string[] = []) {
-    const inputChannel = this.inputManager.createKeyboardChannel(
-      'player1',
-      filter
-    );
+  newKeyboardPlayer(mapping: Map<string, string>) {
+    const inputChannel = this.inputManager.createKeyboardChannel(mapping);
     const player = new Player(inputChannel);
     this.players.push(player);
   }
@@ -65,9 +65,32 @@ export class Game {
 
   distributePlayerInitialPositions() {
     //todo: enumerate all players and distribute evenly around edges
-    const cell = this.grid.getCell(Math.floor(GridSize / 2), 0);
-    const edge = cell.left;
-    this.userPlayer.setEdge(edge, 1);
+    this.setPlayerToCellEdge(
+      this.players[0],
+      Math.floor(GridSize / 2),
+      0,
+      'left',
+      1
+    );
+    this.setPlayerToCellEdge(
+      this.players[1],
+      0,
+      Math.floor(GridSize / 2),
+      'top',
+      1
+    );
+  }
+
+  setPlayerToCellEdge(
+    player: Player,
+    hGridIndex: number,
+    vGridIndex: number,
+    edgeName: string,
+    direction: Direction
+  ) {
+    const cell = this.grid.getCell(hGridIndex, vGridIndex);
+    const edge = (cell as any)[edgeName];
+    player.setEdge(edge, direction);
   }
 
   addPlayerElementsToSprites() {

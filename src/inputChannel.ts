@@ -3,8 +3,7 @@ import { EventEmitter } from 'eventemitter3';
 export type InputChannelType = string;
 
 export class InputChannel<T> extends EventEmitter {
-  name: string;
-  filter: T[];
+  mapping: Map<T, string>;
   bufferSize: number;
   buffer: T[] = [];
   bufferClearTimeoutMs: number;
@@ -12,20 +11,18 @@ export class InputChannel<T> extends EventEmitter {
   activeInput: Map<T, number> = new Map();
 
   constructor(
-    name: string,
-    filter: T[] = [],
+    mapping: Map<T, string> = new Map(),
     bufferSize: number = 1,
     bufferClearTimeoutMs: number = 3000
   ) {
     super();
-    this.name = name;
-    this.filter = filter;
+    this.mapping = mapping;
     this.bufferSize = bufferSize;
     this.bufferClearTimeoutMs = bufferClearTimeoutMs;
   }
 
-  get hasFilteredInput() {
-    return this.filter.length && this.activeInput.size > 0;
+  get hasMappedInput() {
+    return this.mapping.size && this.activeInput.size > 0;
   }
 
   isInputActive(input: T) {
@@ -33,9 +30,7 @@ export class InputChannel<T> extends EventEmitter {
   }
 
   allowInput(input: T) {
-    return this.filter.length
-      ? !!this.filter.find((inputFilter) => input === inputFilter)
-      : true;
+    return this.mapping.size ? this.mapping.has(input) : true;
   }
 
   activateInput(input: T) {
@@ -89,15 +84,17 @@ export class InputChannel<T> extends EventEmitter {
 export class KeyboardInputChannel extends InputChannel<string> {
   onKeyDown(e: KeyboardEvent) {
     const { code } = e;
-    this.activateInput(code);
-    this.push(code);
-    this.emit('keydown', code);
+    const input = this.mapping.get(code) || code;
+    this.activateInput(input);
+    this.push(input);
+    this.emit('keydown', input);
   }
 
   onKeyUp(e: KeyboardEvent) {
     const { code } = e;
-    this.activeInput.delete(code);
-    this.emit('keyup', code);
+    const input = this.mapping.get(code) || code;
+    this.deactivateInput(input);
+    this.emit('keyup', input);
   }
 
   isKeyPressed(code: string) {

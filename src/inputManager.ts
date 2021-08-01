@@ -5,7 +5,7 @@ import {
 } from './inputChannel';
 
 export class InputManager {
-  channels: Map<string, InputChannel<InputChannelType>> = new Map();
+  channels: InputChannel<InputChannelType>[] = [];
 
   constructor() {
     document.addEventListener('keydown', this.onKeyDown);
@@ -14,44 +14,36 @@ export class InputManager {
   }
 
   createKeyboardChannel(
-    name: string,
-    accepts: string[],
+    mapping: Map<string, string>,
     bufferSize?: number,
     bufferClearTimeoutMs?: number
   ) {
     const channel = new KeyboardInputChannel(
-      name,
-      accepts,
+      mapping,
       bufferSize,
       bufferClearTimeoutMs
     );
-    this.channels.set(name, channel);
+    this.channels.push(channel);
     return channel;
   }
 
-  getChannel(name: string) {
-    return this.channels.get(name)!;
-  }
-
-  getChannelsForInput(e: KeyboardEvent) {
-    const channels: KeyboardInputChannel[] = [];
-    this.channels.forEach((channel) => {
-      if (
-        channel instanceof KeyboardInputChannel &&
-        channel.allowInput(e.code)
-      ) {
-        channels.push(channel);
-      }
-    });
-    return channels;
+  getChannelsForKeyboardInput(e: KeyboardEvent) {
+    return this.channels.filter(
+      (channel) =>
+        channel instanceof KeyboardInputChannel && channel.allowInput(e.code)
+    ) as KeyboardInputChannel[];
   }
 
   onKeyDown = (e: KeyboardEvent) => {
-    this.getChannelsForInput(e).forEach((channel) => channel.onKeyDown(e));
+    this.getChannelsForKeyboardInput(e).forEach((channel) =>
+      channel.onKeyDown(e)
+    );
   };
 
   onKeyUp = (e: KeyboardEvent) => {
-    this.getChannelsForInput(e).forEach((channel) => channel.onKeyUp(e));
+    this.getChannelsForKeyboardInput(e).forEach((channel) =>
+      channel.onKeyUp(e)
+    );
   };
 
   update = () => {

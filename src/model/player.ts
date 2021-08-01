@@ -45,26 +45,26 @@ export class Player extends EventEmitter {
           // vertical
           if (direction === -1) {
             this.turnIfCase([
-              { keyCode: 'ArrowLeft', edge: edge.from.prev },
-              { keyCode: 'ArrowRight', edge: edge.from.next, direction: 1 },
+              { keyCode: 'left', edge: edge.from.prev },
+              { keyCode: 'right', edge: edge.from.next, direction: 1 },
             ]);
           } else if (direction === 1) {
             this.turnIfCase([
-              { keyCode: 'ArrowLeft', edge: edge.to.prev, direction: -1 },
-              { keyCode: 'ArrowRight', edge: edge.to.next },
+              { keyCode: 'left', edge: edge.to.prev, direction: -1 },
+              { keyCode: 'right', edge: edge.to.next },
             ]);
           }
         } else if (isHorizontal) {
           // horizontal
           if (direction === -1) {
             this.turnIfCase([
-              { keyCode: 'ArrowUp', edge: edge.from.above },
-              { keyCode: 'ArrowDown', edge: edge.from.below, direction: 1 },
+              { keyCode: 'up', edge: edge.from.above },
+              { keyCode: 'down', edge: edge.from.below, direction: 1 },
             ]);
           } else if (direction === 1) {
             this.turnIfCase([
-              { keyCode: 'ArrowUp', edge: edge.to.above, direction: -1 },
-              { keyCode: 'ArrowDown', edge: edge.to.below },
+              { keyCode: 'up', edge: edge.to.above, direction: -1 },
+              { keyCode: 'down', edge: edge.to.below },
             ]);
           }
         }
