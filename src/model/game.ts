@@ -5,7 +5,7 @@ import { createElement } from './util';
 import { Graphics } from './graphics';
 import { Grid, Buffers as GridBuffers } from './Grid';
 
-export const GridSize = 20;
+export const GridSize = 10;
 
 export class Game {
   static instance: Game = new Game();
@@ -18,7 +18,7 @@ export class Game {
   grid: Grid;
 
   constructor() {
-    this.animator = new Animator(25);
+    this.animator = new Animator(12);
     this.animator.on('frame', this.onFrame);
     this.inputManager = new InputManager();
     this.inputManager
@@ -66,10 +66,6 @@ export class Game {
   distributePlayerInitialPositions() {
     //todo: enumerate all players and distribute evenly around edges
     const cell = this.grid.getCell(Math.floor(GridSize / 2), 0);
-    cell.render(
-      this.grid.graphics.getBuffer(GridBuffers.Grid),
-      'rgba(0,255,0,0.2)'
-    );
     const edge = cell.left;
     this.userPlayer.setEdge(edge, 1);
   }
