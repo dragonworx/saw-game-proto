@@ -1,7 +1,11 @@
-import { InputChannel } from './inputChannel';
+import {
+  InputChannel,
+  KeyboardInputChannel,
+  InputChannelType,
+} from './inputChannel';
 
 export class InputManager {
-  channels: Map<string, InputChannel> = new Map();
+  channels: Map<string, InputChannel<InputChannelType>> = new Map();
 
   constructor() {
     document.addEventListener('keydown', this.onKeyDown);
@@ -9,13 +13,13 @@ export class InputManager {
     requestAnimationFrame(this.update);
   }
 
-  createChannel(
+  createKeyboardChannel(
     name: string,
     accepts: string[],
     bufferSize?: number,
     bufferClearTimeoutMs?: number
   ) {
-    const channel = new InputChannel(
+    const channel = new KeyboardInputChannel(
       name,
       accepts,
       bufferSize,
@@ -30,9 +34,12 @@ export class InputManager {
   }
 
   getChannelsForInput(e: KeyboardEvent) {
-    const channels: InputChannel[] = [];
+    const channels: KeyboardInputChannel[] = [];
     this.channels.forEach((channel) => {
-      if (channel.accepts(e.code)) {
+      if (
+        channel instanceof KeyboardInputChannel &&
+        channel.allowInput(e.code)
+      ) {
         channels.push(channel);
       }
     });

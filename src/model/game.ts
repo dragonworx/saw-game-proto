@@ -1,5 +1,5 @@
 import { InputManager } from '../inputManager';
-import { InputChannelEvent } from '../inputChannel';
+import { KeyboardInputChannel } from '../inputChannel';
 import { Animator } from './animator';
 import { Player } from './player';
 import { createElement } from './util';
@@ -24,16 +24,8 @@ export class Game {
     this.animator.on('frame', this.onFrame);
     this.inputManager = new InputManager();
     this.inputManager
-      .createChannel('general', ['Space', 'Enter'])
+      .createKeyboardChannel('general', ['Space', 'Enter'])
       .on('keydown', this.onGeneralKeyInput);
-    this.inputManager
-      .createChannel('player1', [
-        'ArrowLeft',
-        'ArrowRight',
-        'ArrowUp',
-        'ArrowDown',
-      ])
-      .on('keydown', this.onPlayerKeyInput);
     this.spritesContainer = createElement('div', 'sprites');
     this.graphics = new Graphics();
     this.grid = new Grid(GridSize, GridSize);
@@ -41,6 +33,15 @@ export class Game {
 
   get userPlayer() {
     return this.players[0];
+  }
+
+  newKeyboardPlayer(filter: string[] = []) {
+    const inputChannel = this.inputManager.createKeyboardChannel(
+      'player1',
+      filter
+    );
+    const player = new Player(inputChannel);
+    this.players.push(player);
   }
 
   start(gameView: HTMLDivElement) {
@@ -75,10 +76,6 @@ export class Game {
     this.userPlayer.setEdge(edge, 1);
   }
 
-  addPlayer(player: Player) {
-    this.players.push(player);
-  }
-
   addPlayerElementsToSprites() {
     const { spritesContainer } = this;
     if (spritesContainer) {
@@ -94,8 +91,8 @@ export class Game {
     });
   }
 
-  onGeneralKeyInput = (event: InputChannelEvent) => {
-    switch (event.code) {
+  onGeneralKeyInput = (code: string) => {
+    switch (code) {
       case 'Space':
         this.animator.toggleRunning();
         break;
@@ -104,23 +101,13 @@ export class Game {
     }
   };
 
-  onPlayerKeyInput = (event: InputChannelEvent) => {};
-
   onFrame = (currentFps: number, elapsedTime: number) => {
     this.step();
   };
 
   step() {
-    const userPlayer = this.userPlayer;
     this.players.forEach((player) => {
-      player
-        .move(
-          PlayerSpeed,
-          player === userPlayer
-            ? this.inputManager.getChannel('player1')
-            : undefined
-        )
-        .setSpriteToCurrentPosition();
+      player.move(PlayerSpeed).setSpriteToCurrentPosition();
     });
   }
 }

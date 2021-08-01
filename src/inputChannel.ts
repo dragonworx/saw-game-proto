@@ -1,42 +1,35 @@
 import { EventEmitter } from 'eventemitter3';
 
-export type InputChannelBuffer = string[];
+export type InputChannelType = string;
 
-export interface InputChannelEvent {
-  code: string;
-  buffer: string[];
-  channel: InputChannel;
-}
-
-export class InputChannel extends EventEmitter {
+export class InputChannel<T> extends EventEmitter {
   name: string;
-  keysDown: Map<string, number> = new Map();
-  accept: string[];
+  filter: T[];
   bufferSize: number;
-  buffer: InputChannelBuffer = [];
+  buffer: T[] = [];
   bufferClearTimeoutMs: number;
   bufferClearTimeoutId: number = -1;
 
   constructor(
     name: string,
-    accepts: string[],
-    bufferSize?: number,
-    bufferClearTimeoutMs?: number
+    filter: T[] = [],
+    bufferSize: number = 1,
+    bufferClearTimeoutMs: number = 3000
   ) {
     super();
     this.name = name;
-    this.accept = accepts || [];
-    this.bufferSize = bufferSize || 1;
-    this.bufferClearTimeoutMs = bufferClearTimeoutMs || 3000;
+    this.filter = filter;
+    this.bufferSize = bufferSize;
+    this.bufferClearTimeoutMs = bufferClearTimeoutMs;
   }
 
-  accepts(code: string) {
-    return this.accept.length
-      ? !!this.accept.find((keyCode) => code === keyCode)
+  allowInput(input: T) {
+    return this.filter.length
+      ? !!this.filter.find((inputFilter) => input === inputFilter)
       : true;
   }
 
-  push(code: string) {
+  push(code: T) {
     const { buffer, bufferSize } = this;
     buffer.push(code);
     if (buffer.length > bufferSize) {
@@ -56,7 +49,7 @@ export class InputChannel extends EventEmitter {
     this.bufferClearTimeoutId = -1;
   };
 
-  peek(): string | undefined {
+  peek(): T | undefined {
     return this.buffer[this.buffer.length - 1];
   }
 
@@ -64,23 +57,21 @@ export class InputChannel extends EventEmitter {
     return this.buffer.pop();
   }
 
+  update() {}
+}
+
+export class KeyboardInputChannel extends InputChannel<string> {
+  keysDown: Map<string, number> = new Map();
+
   onKeyDown(e: KeyboardEvent) {
     this.keysDown.set(e.code, Date.now());
     this.push(e.code);
-    this.emit('keydown', {
-      code: e.code,
-      buffer: this.buffer,
-      channel: this,
-    } as InputChannelEvent);
+    this.emit('keydown', e.code);
   }
 
   onKeyUp(e: KeyboardEvent) {
     this.keysDown.delete(e.code);
-    this.emit('keyup', {
-      code: e.code,
-      buffer: this.buffer,
-      channel: this,
-    } as InputChannelEvent);
+    this.emit('keyup', e.code);
   }
 
   isKeyPressed(code: string) {
@@ -94,12 +85,6 @@ export class InputChannel extends EventEmitter {
   }
 
   update() {
-    this.keysDown.forEach((_startTime, code) =>
-      this.emit('keypress', {
-        code,
-        buffer: this.buffer,
-        channel: this,
-      } as InputChannelEvent)
-    );
+    this.keysDown.forEach((_startTime, code) => this.emit('keypress', code));
   }
 }

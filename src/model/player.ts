@@ -1,5 +1,5 @@
 import { EventEmitter } from 'eventemitter3';
-import { InputChannel } from '../inputChannel';
+import { InputChannel, InputChannelType } from '../inputChannel';
 import { Edge, Direction } from './Grid';
 import { createElement } from './util';
 
@@ -8,10 +8,12 @@ export class Player extends EventEmitter {
   direction: Direction = 1;
   offset: number = 0;
   sprite: HTMLDivElement;
+  inputChannel: InputChannel<InputChannelType>;
 
-  constructor() {
+  constructor(inputChannel: InputChannel<InputChannelType>) {
     super();
     this.sprite = createElement('div', undefined, ['sprite', 'player']);
+    this.inputChannel = inputChannel;
   }
 
   setEdge(edge: Edge, direction?: Direction) {
@@ -28,34 +30,35 @@ export class Player extends EventEmitter {
     this.sprite.style.top = `${y}px`;
   }
 
-  move(speed: number, input?: InputChannel) {
-    const { direction, edge } = this;
+  move(speed: number) {
+    const { direction, edge, inputChannel } = this;
     const buffer = edge.grid.graphics.getBuffer('grid');
     this.offset += speed;
     const [x, y, hasLeftEdge] = edge.getPosition(direction, this.offset);
+    const inputPeek = inputChannel.peek();
     if (hasLeftEdge) {
-      if (input && input.peek()) {
+      if (inputPeek) {
         // turn
         if (edge.isVertical) {
           // vertical
           if (direction === -1) {
             // moving up
-            if (input.peek() === 'ArrowLeft') {
+            if (inputPeek === 'ArrowLeft') {
               if (edge.from.prev) {
                 this.setEdge(edge.from.prev);
               }
-            } else if (input.peek() === 'ArrowRight') {
+            } else if (inputPeek === 'ArrowRight') {
               if (edge.from.next) {
                 this.setEdge(edge.from.next, 1);
               }
             }
           } else {
             // moving down
-            if (input.peek() === 'ArrowLeft') {
+            if (inputPeek === 'ArrowLeft') {
               if (edge.to.prev) {
                 this.setEdge(edge.to.prev, -1);
               }
-            } else if (input.peek() === 'ArrowRight') {
+            } else if (inputPeek === 'ArrowRight') {
               if (edge.to.next) {
                 this.setEdge(edge.to.next);
               }
@@ -65,29 +68,29 @@ export class Player extends EventEmitter {
           // horizontal
           if (direction === -1) {
             // moving left
-            if (input.peek() === 'ArrowUp') {
+            if (inputPeek === 'ArrowUp') {
               if (edge.from.above) {
                 this.setEdge(edge.from.above);
               }
-            } else if (input.peek() === 'ArrowDown') {
+            } else if (inputPeek === 'ArrowDown') {
               if (edge.from.below) {
                 this.setEdge(edge.from.below, 1);
               }
             }
           } else {
             // moving right
-            if (input.peek() === 'ArrowUp') {
+            if (inputPeek === 'ArrowUp') {
               if (edge.to.above) {
                 this.setEdge(edge.to.above, -1);
               }
-            } else if (input.peek() === 'ArrowDown') {
+            } else if (inputPeek === 'ArrowDown') {
               if (edge.to.below) {
                 this.setEdge(edge.to.below);
               }
             }
           }
         }
-        input.clearBuffer();
+        inputChannel.clearBuffer();
       } else {
         // continue / wrap
         this.setEdge(edge.getNextWrappedEdge(direction));
