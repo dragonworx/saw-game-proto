@@ -5,7 +5,7 @@ import { createElement } from './util';
 import { Graphics } from './graphics';
 import { Grid, Buffers as GridBuffers } from './Grid';
 
-export const GridSize = 7;
+export const GridSize = 20;
 
 export class Game {
   static instance: Game = new Game();
@@ -18,7 +18,7 @@ export class Game {
   grid: Grid;
 
   constructor() {
-    this.animator = new Animator(10);
+    this.animator = new Animator(25);
     this.animator.on('frame', this.onFrame);
     this.inputManager = new InputManager();
     this.inputManager

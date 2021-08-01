@@ -20,9 +20,7 @@ export class Player extends EventEmitter {
     this.inputChannel.on('keydown', this.onKeyDown);
   }
 
-  onKeyDown = (code: string) => {
-    // this.setSpriteToCurrentPosition();
-  };
+  onKeyDown = (code: string) => {};
 
   setSpriteToCurrentPosition() {
     const [x, y] = this.edge.getPosition(this.direction, this.offset);
@@ -34,7 +32,7 @@ export class Player extends EventEmitter {
     const { direction, edge, inputChannel, speed } = this;
     const { isVertical, isHorizontal, grid } = edge;
     const buffer = grid.graphics.getBuffer('grid');
-    this.offset += speed;
+    this.offset += Math.min(speed, grid.minCellSize);
     const [_x, _y, hasLeftEdge] = edge.getPosition(direction, this.offset);
     const inputPeek = inputChannel.peek();
     if (hasLeftEdge) {
@@ -46,67 +44,30 @@ export class Player extends EventEmitter {
         if (isVertical) {
           // vertical
           if (direction === -1) {
-            // moving up
-            if (inputPeek === 'ArrowLeft') {
-              if (edge.from.prev) {
-                this.setEdge(edge.from.prev);
-              }
-            } else if (inputPeek === 'ArrowRight') {
-              if (edge.from.next) {
-                this.setEdge(edge.from.next, 1);
-              }
-            } else {
-              inputChannel.clearBuffer();
-              this.setEdge(edge.getNextWrappedEdge(direction));
-            }
+            this.turnIfCase([
+              { keyCode: 'ArrowLeft', edge: edge.from.prev },
+              { keyCode: 'ArrowRight', edge: edge.from.next, direction: 1 },
+            ]);
           } else if (direction === 1) {
-            // moving down
-            if (inputPeek === 'ArrowLeft') {
-              if (edge.to.prev) {
-                this.setEdge(edge.to.prev, -1);
-              }
-            } else if (inputPeek === 'ArrowRight') {
-              if (edge.to.next) {
-                this.setEdge(edge.to.next);
-              }
-            } else {
-              inputChannel.clearBuffer();
-              this.setEdge(edge.getNextWrappedEdge(direction));
-            }
+            this.turnIfCase([
+              { keyCode: 'ArrowLeft', edge: edge.to.prev, direction: -1 },
+              { keyCode: 'ArrowRight', edge: edge.to.next },
+            ]);
           }
         } else if (isHorizontal) {
           // horizontal
           if (direction === -1) {
-            // moving left
-            if (inputPeek === 'ArrowUp') {
-              if (edge.from.above) {
-                this.setEdge(edge.from.above);
-              }
-            } else if (inputPeek === 'ArrowDown') {
-              if (edge.from.below) {
-                this.setEdge(edge.from.below, 1);
-              }
-            } else {
-              inputChannel.clearBuffer();
-              this.setEdge(edge.getNextWrappedEdge(direction));
-            }
+            this.turnIfCase([
+              { keyCode: 'ArrowUp', edge: edge.from.above },
+              { keyCode: 'ArrowDown', edge: edge.from.below, direction: 1 },
+            ]);
           } else if (direction === 1) {
-            // moving right
-            if (inputPeek === 'ArrowUp') {
-              if (edge.to.above) {
-                this.setEdge(edge.to.above, -1);
-              }
-            } else if (inputPeek === 'ArrowDown') {
-              if (edge.to.below) {
-                this.setEdge(edge.to.below);
-              }
-            } else {
-              inputChannel.clearBuffer();
-              this.setEdge(edge.getNextWrappedEdge(direction));
-            }
+            this.turnIfCase([
+              { keyCode: 'ArrowUp', edge: edge.to.above, direction: -1 },
+              { keyCode: 'ArrowDown', edge: edge.to.below },
+            ]);
           }
         }
-        // inputChannel.clearBuffer();
       } else {
         // continue / wrap
         this.setEdge(edge.getNextWrappedEdge(direction));
@@ -117,8 +78,21 @@ export class Player extends EventEmitter {
     buffer.updateImageData();
   }
 
-  turn(keyCode: string, edge: Edge, direction?: Direction) {
-    const { inputChannel } = this;
+  turnIfCase(cases: TurnCase[]) {
+    const { inputChannel, edge, direction } = this;
+    const inputPeek = inputChannel.peek();
+    if (
+      cases.findIndex(({ keyCode, edge, direction }) => {
+        if (keyCode === inputPeek) {
+          if (edge) {
+            this.setEdge(edge, direction);
+            return true;
+          }
+        }
+      }) === -1
+    ) {
+      this.setEdge(edge.getNextWrappedEdge(direction));
+    }
   }
 
   setEdge(edge: Edge, direction?: Direction) {
@@ -128,4 +102,10 @@ export class Player extends EventEmitter {
       this.direction = direction;
     }
   }
+}
+
+interface TurnCase {
+  keyCode: string;
+  edge?: Edge;
+  direction?: Direction;
 }

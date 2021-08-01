@@ -32,6 +32,10 @@ export class Grid {
     this.graphics.createBuffer(Buffers.Grid);
   }
 
+  get minCellSize() {
+    return Math.min(this.cellWidth, this.cellHeight);
+  }
+
   init(width: number, height: number) {
     const { hDivisions, vDivisions, vertexMap, edgeMap } = this;
     this.width = width;
