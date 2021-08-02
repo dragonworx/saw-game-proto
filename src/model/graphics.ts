@@ -33,4 +33,8 @@ export class Graphics {
   getCanvas(bufferName: string) {
     return this.buffers.get(bufferName)!.canvas;
   }
+
+  addBuffersToContainer(container: HTMLElement) {
+    this.buffers.forEach((buffer) => container.appendChild(buffer.canvas));
+  }
 }

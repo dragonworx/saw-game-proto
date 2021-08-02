@@ -17,11 +17,11 @@ export function createElement<T extends HTMLElement>(
   return element;
 }
 
-export function randomRgb() {
+export function randomColor(withAlpha: boolean = false): Color {
   const r = Math.round(Math.random() * 255);
   const g = Math.round(Math.random() * 255);
   const b = Math.round(Math.random() * 255);
-  return `rgb(${r},${g},${b})`;
+  return withAlpha ? [r, g, b, Math.round(Math.random() * 255)] : [r, g, b];
 }
 
 export function throttled(fn: Function, delay: number) {

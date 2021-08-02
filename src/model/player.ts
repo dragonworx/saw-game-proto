@@ -1,7 +1,8 @@
 import { EventEmitter } from 'eventemitter3';
 import { InputChannel, InputChannelType } from '../inputChannel';
-import { Edge, Direction } from './Grid';
-import { createElement } from './util';
+import { CutLine } from './cutLine';
+import { Edge, Direction, Buffers as GridBuffers } from './grid';
+import { createElement, Point } from './util';
 
 export const PlayerInitialSpeed = 7;
 
@@ -12,12 +13,14 @@ export class Player extends EventEmitter {
   sprite: HTMLDivElement;
   inputChannel: InputChannel<InputChannelType>;
   speed: number = PlayerInitialSpeed;
+  cutLine: CutLine;
 
   constructor(inputChannel: InputChannel<InputChannelType>) {
     super();
     this.sprite = createElement('div', undefined, ['sprite', 'player']);
     this.inputChannel = inputChannel;
     this.inputChannel.on('keydown', this.onKeyDown);
+    this.cutLine = new CutLine();
   }
 
   onKeyDown = (code: string) => {};
@@ -31,18 +34,22 @@ export class Player extends EventEmitter {
   move() {
     const { direction, edge, inputChannel, speed } = this;
     const { isVertical, isHorizontal, grid } = edge;
-    const buffer = grid.graphics.getBuffer('grid');
-    this.offset += Math.min(speed, grid.minCellSize);
-    const [_x, _y, hasLeftEdge] = edge.getPosition(direction, this.offset);
+    const buffer = edge.grid.graphics.getBuffer(GridBuffers.Grid);
     const inputPeek = inputChannel.peek();
+    this.offset += Math.min(speed, grid.minCellSize);
+    const hasLeftEdge = !edge.containsPosition(direction, this.offset);
+
     if (hasLeftEdge) {
+      const toVertex = edge.getToVertex(direction);
       let overflow: number = isVertical
         ? this.offset - grid.cellHeight
         : this.offset - grid.cellWidth;
       if (inputPeek) {
-        // turn
         if (isVertical) {
-          // vertical
+          if (toVertex.hasBothHorizontalCuts) {
+            buffer.drawPoint(toVertex.x, toVertex.y);
+            const polygon = this.cutLine.getIntersectionPolygon(toVertex);
+          }
           if (direction === -1) {
             this.turnIfCase([
               { keyCode: 'left', edge: edge.from.prev },
@@ -55,7 +62,11 @@ export class Player extends EventEmitter {
             ]);
           }
         } else if (isHorizontal) {
-          // horizontal
+          if (toVertex.hasBothVerticalCuts) {
+            buffer.drawPoint(toVertex.x, toVertex.y);
+            const polygon = this.cutLine.getIntersectionPolygon(toVertex);
+            buffer.fillPolygon(polygon.toArray() as Point[], 'red');
+          }
           if (direction === -1) {
             this.turnIfCase([
               { keyCode: 'up', edge: edge.from.above },
@@ -69,13 +80,14 @@ export class Player extends EventEmitter {
           }
         }
       } else {
-        // continue / wrap
         this.setEdge(edge.getNextWrappedEdge(direction));
       }
       this.offset = overflow;
     }
-    this.edge.render(buffer, [255, 255, 255]);
-    buffer.updateImageData();
+
+    buffer.batchImageDataOps(() => {
+      this.cutLine.renderCurrentPosition(buffer, direction, this.offset);
+    });
   }
 
   turnIfCase(cases: TurnCase[]) {
@@ -101,6 +113,7 @@ export class Player extends EventEmitter {
     if (direction !== undefined) {
       this.direction = direction;
     }
+    this.cutLine.addEdge(edge);
   }
 }
 

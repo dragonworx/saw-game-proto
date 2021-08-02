@@ -3,7 +3,7 @@ import { Animator } from './animator';
 import { Player } from './player';
 import { createElement } from './util';
 import { Graphics } from './graphics';
-import { Grid, Buffers as GridBuffers, Direction } from './Grid';
+import { Grid, Buffers as GridBuffers, Direction } from './grid';
 
 export const GridSize = 10;
 
@@ -42,12 +42,13 @@ export class Game {
     this.players.push(player);
   }
 
-  start(gameView: HTMLDivElement) {
+  init(gameView: HTMLDivElement) {
     const { spritesContainer } = this;
     const { offsetWidth: width, offsetHeight: height } = gameView;
     this.grid.init(width, height);
     this.graphics.setSize(width, height);
-    gameView.appendChild(this.grid.graphics.getBuffer(GridBuffers.Grid).canvas);
+    this.grid.graphics.addBuffersToContainer(gameView);
+    this.graphics.addBuffersToContainer(gameView);
     gameView.appendChild(spritesContainer);
     this.reset();
     this.animator.start();
@@ -72,13 +73,15 @@ export class Game {
       'left',
       1
     );
-    this.setPlayerToCellEdge(
-      this.players[1],
-      0,
-      Math.floor(GridSize / 2),
-      'top',
-      1
-    );
+    if (this.players.length === 2) {
+      this.setPlayerToCellEdge(
+        this.players[1],
+        0,
+        Math.floor(GridSize / 2),
+        'bottom',
+        1
+      );
+    }
   }
 
   setPlayerToCellEdge(

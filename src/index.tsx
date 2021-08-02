@@ -14,15 +14,15 @@ Game.instance.newKeyboardPlayer(
   )
 );
 
-Game.instance.newKeyboardPlayer(
-  new Map(
-    Object.entries({
-      KeyA: 'left',
-      KeyD: 'right',
-      KeyW: 'up',
-      KeyS: 'down',
-    })
-  )
-);
+// Game.instance.newKeyboardPlayer(
+//   new Map(
+//     Object.entries({
+//       KeyA: 'left',
+//       KeyD: 'right',
+//       KeyW: 'up',
+//       KeyS: 'down',
+//     })
+//   )
+// );
 
 ReactDOM.render(<App />, document.getElementById('main'));

@@ -4,9 +4,12 @@ import { Color } from './util';
 
 export enum Buffers {
   Grid = 'grid',
+  Cuts = 'cuts',
 }
 
 export type Direction = -1 | 1;
+
+export type Vector = [number, number];
 
 const vertexKey = (h: number, v: number) => `${h}:${v}`;
 
@@ -30,6 +33,7 @@ export class Grid {
     this.vDivisions = vDivisions;
     this.graphics = new Graphics();
     this.graphics.createBuffer(Buffers.Grid);
+    this.graphics.createBuffer(Buffers.Cuts);
   }
 
   get minCellSize() {
@@ -215,6 +219,14 @@ export class Vertex {
     this.x = x;
     this.y = y;
   }
+
+  get hasBothVerticalCuts() {
+    return this.above && this.below && this.above.isCut && this.below.isCut;
+  }
+
+  get hasBothHorizontalCuts() {
+    return this.prev && this.next && this.prev.isCut && this.next.isCut;
+  }
 }
 
 export class Edge {
@@ -245,34 +257,66 @@ export class Edge {
     return this.from.y === this.to.y;
   }
 
-  getPosition(direction: Direction, offset: number): [number, number, boolean] {
+  getPosition(direction: Direction, offset: number): Vector {
     if (this.isVertical) {
       if (direction === -1) {
-        return [
-          this.to.x,
-          this.to.y - offset,
-          this.to.y - (this.to.y - offset) > this.grid.cellHeight,
-        ];
+        return [this.to.x, this.to.y - offset];
       } else {
-        return [
-          this.to.x,
-          this.from.y + offset,
-          this.from.y + offset - this.from.y > this.grid.cellHeight,
-        ];
+        return [this.to.x, this.from.y + offset];
       }
     } else {
       if (direction === -1) {
-        return [
-          this.to.x - offset,
-          this.from.y,
-          this.to.x - (this.to.x - offset) > this.grid.cellWidth,
-        ];
+        return [this.to.x - offset, this.from.y];
       } else {
-        return [
-          this.from.x + offset,
-          this.from.y,
-          this.from.x + offset - this.from.x > this.grid.cellWidth,
-        ];
+        return [this.from.x + offset, this.from.y];
+      }
+    }
+  }
+
+  containsPosition(direction: Direction, offset: number): boolean {
+    if (this.isVertical) {
+      if (direction === -1) {
+        return this.to.y - (this.to.y - offset) <= this.grid.cellHeight;
+      } else {
+        return this.from.y + offset - this.from.y <= this.grid.cellHeight;
+      }
+    } else {
+      if (direction === -1) {
+        return this.to.x - (this.to.x - offset) <= this.grid.cellWidth;
+      } else {
+        return this.from.x + offset - this.from.x <= this.grid.cellWidth;
+      }
+    }
+  }
+
+  getFromVertex(direction: Direction): Vertex {
+    if (this.isVertical) {
+      if (direction === -1) {
+        return this.to;
+      } else {
+        return this.from;
+      }
+    } else {
+      if (direction === -1) {
+        return this.to;
+      } else {
+        return this.from;
+      }
+    }
+  }
+
+  getToVertex(direction: Direction): Vertex {
+    if (this.isVertical) {
+      if (direction === -1) {
+        return this.from;
+      } else {
+        return this.to;
+      }
+    } else {
+      if (direction === -1) {
+        return this.from;
+      } else {
+        return this.to;
       }
     }
   }
