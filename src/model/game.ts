@@ -3,7 +3,7 @@ import { Animator } from './animator';
 import { Player } from './player';
 import { createElement } from './util';
 import { Graphics } from './graphics';
-import { Grid, Buffers as GridBuffers, Direction } from './grid';
+import { Grid, Direction, Buffers as GridBuffer } from './grid';
 
 export const GridSize = 10;
 
@@ -18,7 +18,7 @@ export class Game {
   grid: Grid;
 
   constructor() {
-    this.animator = new Animator(12);
+    this.animator = new Animator(15);
     this.animator.on('frame', this.onFrame);
     this.inputManager = new InputManager();
     this.inputManager
@@ -129,6 +129,23 @@ export class Game {
     this.players.forEach((player) => {
       player.move();
       player.setSpriteToCurrentPosition();
+    });
+    const cutsBuffer = this.grid.graphics.getBuffer(GridBuffer.Cuts);
+    // cutsBuffer.fillRect(
+    //   0,
+    //   0,
+    //   this.grid.width,
+    //   this.grid.height,
+    //   'rgba(0,0,0,0.01)'
+    // );
+    cutsBuffer.batchImageDataOps(() => {
+      this.players.forEach((player) =>
+        player.cutLine.renderCurrentPosition(
+          cutsBuffer,
+          player.direction,
+          player.offset
+        )
+      );
     });
   }
 }

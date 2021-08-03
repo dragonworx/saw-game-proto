@@ -17,6 +17,7 @@ export class CutLine {
 
   clear() {
     this.edges = [];
+    this.color = randomColor();
   }
 
   addEdge(edge: Edge) {
@@ -25,9 +26,14 @@ export class CutLine {
   }
 
   getIntersectionPolygon(vertex: Vertex) {
-    const vertexes = this.edges.map((edge) => edge.to);
-    const index = vertexes.findIndex((vert) => vert === vertex);
-    const subVertexes = vertexes.slice(index).map((vert) => [vert.x, vert.y]);
+    const vertexes: Set<Vertex> = new Set();
+    this.edges.forEach((edge) => {
+      vertexes.add(edge.to);
+      vertexes.add(edge.from);
+    });
+    const array = Array.from(vertexes);
+    const index = array.findIndex((vert) => vert === vertex);
+    const subVertexes = array.slice(index).map((vert) => [vert.x, vert.y]);
     return new Polygon(subVertexes);
   }
 

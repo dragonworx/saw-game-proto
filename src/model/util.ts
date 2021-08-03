@@ -24,6 +24,14 @@ export function randomColor(withAlpha: boolean = false): Color {
   return withAlpha ? [r, g, b, Math.round(Math.random() * 255)] : [r, g, b];
 }
 
+export function randomRgb() {
+  return rgb(randomColor());
+}
+
+export function rgb(color: Color) {
+  return `rgb(${color[0]},${color[1]},${color[2]})`;
+}
+
 export function throttled(fn: Function, delay: number) {
   let lastCall = 0;
   return function (...args: any[]) {

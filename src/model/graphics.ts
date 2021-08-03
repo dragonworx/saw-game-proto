@@ -21,7 +21,7 @@ export class Graphics {
     const { width, height } = this;
     const buffer = new Buffer(width, height);
     this.buffers.set(name, buffer);
-    buffer.canvas.setAttribute('data-name', name);
+    buffer.canvas.setAttribute('data-buffer-name', name);
     this.container.appendChild(buffer.canvas);
     return buffer;
   }

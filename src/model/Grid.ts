@@ -220,8 +220,16 @@ export class Vertex {
     this.y = y;
   }
 
+  get hasVerticalCuts() {
+    return (this.above && this.above.isCut) || (this.below && this.below.isCut);
+  }
+
   get hasBothVerticalCuts() {
     return this.above && this.below && this.above.isCut && this.below.isCut;
+  }
+
+  get hasHorizontalCuts() {
+    return (this.prev && this.prev.isCut) || (this.next && this.next.isCut);
   }
 
   get hasBothHorizontalCuts() {
@@ -376,7 +384,7 @@ export class Edge {
     return this.grid.getCell(this.h, this.v);
   }
 
-  render(buffer: Buffer, color: Color = [0, 255, 255]) {
+  render(buffer: Buffer, color: Color = [100, 100, 100]) {
     buffer.drawStraightLine(
       this.from.x,
       this.from.y,
