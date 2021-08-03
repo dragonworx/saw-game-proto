@@ -5,7 +5,7 @@ import { createElement } from './util';
 import { Graphics } from './graphics';
 import { Grid, Direction, Buffers as GridBuffer } from './grid';
 
-export const GridSize = 10;
+export const GridSize = 50;
 
 export class Game {
   static instance: Game = new Game();
@@ -139,13 +139,7 @@ export class Game {
     //   'rgba(0,0,0,0.01)'
     // );
     cutsBuffer.batchImageDataOps(() => {
-      this.players.forEach((player) =>
-        player.cutLine.renderCurrentPosition(
-          cutsBuffer,
-          player.direction,
-          player.offset
-        )
-      );
+      this.players.forEach((player) => player.renderCurrentPosition());
     });
   }
 }

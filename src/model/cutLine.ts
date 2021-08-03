@@ -1,23 +1,13 @@
 import Polygon from 'polygon';
 import { Direction, Edge, Vertex } from './grid';
 import { Buffer } from './buffer';
-import { Color, randomColor } from './util';
+import { Color, randomColor, Rect } from './util';
 
 export class CutLine {
   edges: Edge[] = [];
-  color: Color;
-
-  constructor() {
-    this.color = randomColor();
-  }
-
-  get last() {
-    return this.edges[this.edges.length - 1];
-  }
 
   clear() {
     this.edges = [];
-    this.color = randomColor();
   }
 
   addEdge(edge: Edge) {
@@ -37,31 +27,39 @@ export class CutLine {
     return new Polygon(subVertexes);
   }
 
-  render(buffer: Buffer) {
-    this.edges.forEach((edge) => edge.render(buffer, this.color));
+  getPolygon() {
+    const vertexes: Set<Vertex> = new Set();
+    this.edges.forEach((edge) => {
+      vertexes.add(edge.to);
+      vertexes.add(edge.from);
+    });
+    const array = Array.from(vertexes).map((vert) => [vert.x, vert.y]);
+    return new Polygon(array);
   }
 
-  renderLast(buffer: Buffer) {
-    this.last.render(buffer, this.color);
+  uncutEdges() {
+    this.edges.forEach((edge) => (edge.isCut = false));
   }
 
-  renderCurrentPosition(buffer: Buffer, direction: Direction, offset: number) {
-    const edge = this.last;
-    const [x, y] = edge.getPosition(direction, offset);
-    if (edge.isVertical) {
-      buffer.drawVerticalLine(
-        edge.getFromVertex(direction).y,
-        y,
-        x,
-        this.color
-      );
-    } else {
-      buffer.drawHorizontalLine(
-        edge.getFromVertex(direction).x,
-        x,
-        y,
-        this.color
-      );
-    }
+  getBounds(): Rect {
+    let xMin: number = Number.MAX_VALUE;
+    let yMin: number = Number.MAX_VALUE;
+    let xMax: number = Number.MIN_VALUE;
+    let yMax: number = Number.MIN_VALUE;
+    this.edges.forEach((edge) => {
+      xMin = Math.min(xMin, edge.from.x);
+      xMin = Math.min(xMin, edge.to.x);
+      yMin = Math.min(yMin, edge.from.y);
+      yMin = Math.min(yMin, edge.to.y);
+      xMax = Math.max(xMax, edge.from.x);
+      xMax = Math.max(xMax, edge.to.x);
+      yMax = Math.max(yMax, edge.from.y);
+      yMax = Math.max(yMax, edge.to.y);
+    });
+    return [xMin, yMin, xMax - xMin, yMax - yMin];
+  }
+
+  render(buffer: Buffer, color: Color) {
+    this.edges.forEach((edge) => edge.render(buffer, color));
   }
 }

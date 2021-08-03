@@ -1,4 +1,5 @@
 export type Point = [number, number];
+export type Rect = [number, number, number, number];
 
 export type Color = [number, number, number, number?];
 

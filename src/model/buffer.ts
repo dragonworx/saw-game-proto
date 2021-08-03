@@ -116,6 +116,21 @@ export class Buffer {
     ctx.fill();
   }
 
+  strokeRect(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color: string
+  ) {
+    const { ctx } = this;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.rect(x, y, width, height);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
   fillPolygon(points: Point[], color: string) {
     const { ctx } = this;
     ctx.fillStyle = color;

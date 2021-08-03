@@ -1,6 +1,7 @@
 import { Graphics } from './graphics';
 import { Buffer } from './buffer';
 import { Color } from './util';
+import { CutLine } from './cutLine';
 
 export enum Buffers {
   Grid = 'grid',
@@ -205,6 +206,40 @@ export class Grid {
       }
     });
   }
+
+  cutCells(cutLine: CutLine) {
+    const { cellWidth, cellHeight } = this;
+    const [x, y, w, h] = cutLine.getBounds();
+    const gridHMin = x / cellWidth;
+    const gridVMin = y / cellHeight;
+    const gridHMax = gridHMin + w / cellWidth;
+    const gridVMax = gridVMin + h / cellHeight;
+    const buffer = this.graphics.getBuffer(Buffers.Grid);
+    const vertexes: Set<Vertex> = new Set();
+    cutLine.edges.forEach((edge) => {
+      vertexes.add(edge.from);
+      vertexes.add(edge.to);
+    });
+    buffer.fillRect(x, y, w, h, 'rgba(255,0,0,0.2)');
+    for (let v = gridVMin; v < gridVMax; v++) {
+      let isEmpty = false;
+      for (let h = gridHMin; h < gridHMax; h++) {
+        const cell = this.getCell(h, v);
+        if (
+          vertexes.has(cell.left.from) &&
+          vertexes.has(cell.left.to) &&
+          cell.left.isCut
+        ) {
+          isEmpty = !isEmpty;
+        }
+        if (isEmpty) {
+          cell.isEmpty = true;
+          cell.render(buffer, 'rgba(0,255,0,0.1)');
+        }
+      }
+    }
+    cutLine.uncutEdges();
+  }
 }
 
 export class Vertex {
@@ -400,6 +435,7 @@ export class Cell {
   left: Edge;
   right: Edge;
   bottom: Edge;
+  isEmpty: boolean = false;
 
   constructor(top: Edge, left: Edge, right: Edge, bottom: Edge) {
     this.top = top;

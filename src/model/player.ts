@@ -2,7 +2,7 @@ import { EventEmitter } from 'eventemitter3';
 import { InputChannel, InputChannelType } from '../inputChannel';
 import { CutLine } from './cutLine';
 import { Edge, Direction, Buffers as GridBuffers, Vertex } from './grid';
-import { createElement, randomColor, rgb, Color } from './util';
+import { createElement, randomColor, rgb, Color, Point } from './util';
 
 export const PlayerInitialSpeed = 7;
 
@@ -13,14 +13,12 @@ export class Player extends EventEmitter {
   sprite: HTMLDivElement;
   inputChannel: InputChannel<InputChannelType>;
   speed: number = PlayerInitialSpeed;
-  cutLine: CutLine;
 
   constructor(inputChannel: InputChannel<InputChannelType>) {
     super();
     this.sprite = createElement('div', undefined, ['sprite', 'player']);
     this.inputChannel = inputChannel;
     this.inputChannel.on('keydown', this.onKeyDown);
-    this.cutLine = new CutLine();
   }
 
   onKeyDown = (code: string) => {};
@@ -108,7 +106,28 @@ export class Player extends EventEmitter {
     if (direction !== undefined) {
       this.direction = direction;
     }
-    this.cutLine.addEdge(edge);
+    edge.isCut = true;
+  }
+
+  renderCurrentPosition() {
+    const { edge, direction, offset } = this;
+    const buffer = edge.grid.graphics.getBuffer(GridBuffers.Cuts);
+    const [x, y] = edge.getPosition(direction, offset);
+    if (edge.isVertical) {
+      buffer.drawVerticalLine(
+        edge.getFromVertex(direction).y,
+        y,
+        x,
+        [255, 255, 255]
+      );
+    } else {
+      buffer.drawHorizontalLine(
+        edge.getFromVertex(direction).x,
+        x,
+        y,
+        [255, 255, 255]
+      );
+    }
   }
 
   interset() {
@@ -126,16 +145,23 @@ export class Player extends EventEmitter {
 
     const seen: Map<Edge, boolean> = new Map();
     const color = randomColor();
-    this.traceEdgeForIntersection(edge, direction, toVertex, seen, color);
+    const cutLine: CutLine = new CutLine();
+    this.traceEdgeForIntersection(
+      edge,
+      direction,
+      toVertex,
+      seen,
+      color,
+      cutLine
+    );
 
-    // Need algorithm which backtracks each edge from the current intersection edge
-    // It needs to recursively trace each edge and follow back to the intersection point
-    // This will produce the intersection Polygon
+    grid.cutCells(cutLine);
 
-    // const polygon = this.cutLine.getIntersectionPolygon(toVertex);
-    // polygon.toArray().forEach((p) => buffer.drawPoint(p[0], p[1], 'pink'));
-    // buffer.fillPolygon(polygon.toArray() as Point[], 'red');
-    // this.cutLine.clear();
+    const gridBuffer = grid.graphics.getBuffer(GridBuffers.Grid);
+    setTimeout(() => {
+      buffer.batchImageDataOps(() => cutLine.render(buffer, [0, 0, 0]));
+      gridBuffer.batchImageDataOps(() => cutLine.render(gridBuffer, [0, 0, 0]));
+    }, 1000);
   }
 
   traceEdgeForIntersection(
@@ -143,33 +169,67 @@ export class Player extends EventEmitter {
     direction: Direction,
     destVertex: Vertex,
     seen: Map<Edge, boolean>,
-    color: Color
+    color: Color,
+    cutLine: CutLine
   ) {
+    const buffer = edge.grid.graphics.getBuffer(GridBuffers.Cuts);
+    const vertex = edge.getFromVertex(direction);
     if (seen.has(edge)) {
       return;
     }
-    const buffer = edge.grid.graphics.getBuffer(GridBuffers.Cuts);
-    const vertex = edge.getFromVertex(direction);
     if (vertex === destVertex) {
       buffer.drawPoint(vertex.x, vertex.y, rgb(color), 15);
+      buffer.batchImageDataOps(() => {
+        edge.render(buffer, color);
+        cutLine.addEdge(edge);
+      });
       return;
     }
     buffer.drawPoint(vertex.x, vertex.y, rgb(color), 5);
     buffer.batchImageDataOps(() => {
       edge.render(buffer, color);
+      cutLine.addEdge(edge);
     });
     seen.set(edge, true);
     if (vertex.above && vertex.above.isCut) {
-      this.traceEdgeForIntersection(vertex.above, 1, destVertex, seen, color);
+      this.traceEdgeForIntersection(
+        vertex.above,
+        1,
+        destVertex,
+        seen,
+        color,
+        cutLine
+      );
     }
     if (vertex.below && vertex.below.isCut) {
-      this.traceEdgeForIntersection(vertex.below, -1, destVertex, seen, color);
+      this.traceEdgeForIntersection(
+        vertex.below,
+        -1,
+        destVertex,
+        seen,
+        color,
+        cutLine
+      );
     }
     if (vertex.prev && vertex.prev.isCut) {
-      this.traceEdgeForIntersection(vertex.prev, 1, destVertex, seen, color);
+      this.traceEdgeForIntersection(
+        vertex.prev,
+        1,
+        destVertex,
+        seen,
+        color,
+        cutLine
+      );
     }
     if (vertex.next && vertex.next.isCut) {
-      this.traceEdgeForIntersection(vertex.next, -1, destVertex, seen, color);
+      this.traceEdgeForIntersection(
+        vertex.next,
+        -1,
+        destVertex,
+        seen,
+        color,
+        cutLine
+      );
     }
   }
 }
