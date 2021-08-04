@@ -164,10 +164,10 @@ export class Player extends EventEmitter {
     const edgeA = isVertical ? toVertex.prev : toVertex.above;
     const edgeB = isVertical ? toVertex.next : toVertex.below;
     buffer.drawPoint(toVertex.x, toVertex.y);
-    buffer.batchImageDataOps(() => {
-      edgeA && edgeA.isCut && edgeA.render(buffer, [255, 255, 255]);
-      edgeB && edgeB.isCut && edgeB.render(buffer, [255, 255, 255]);
-    });
+    // buffer.batchImageDataOps(() => {
+    //   edgeA && edgeA.isCut && edgeA.render(buffer, [255, 255, 255]);
+    //   edgeB && edgeB.isCut && edgeB.render(buffer, [255, 255, 255]);
+    // });
 
     const seen: Map<Edge, boolean> = new Map();
     const color = randomColor();
@@ -185,8 +185,10 @@ export class Player extends EventEmitter {
 
     const gridBuffer = grid.graphics.getBuffer(GridBuffers.Grid);
     setTimeout(() => {
-      buffer.batchImageDataOps(() => cutLine.render(buffer, [0, 0, 0]));
-      gridBuffer.batchImageDataOps(() => cutLine.render(gridBuffer, [0, 0, 0]));
+      buffer.batchImageDataOps(() => cutLine.render(buffer, [0, 0, 0, 0]));
+      gridBuffer.batchImageDataOps(() =>
+        cutLine.render(gridBuffer, [100, 100, 100])
+      );
     }, 1000);
   }
 
@@ -206,14 +208,14 @@ export class Player extends EventEmitter {
     if (vertex === destVertex) {
       buffer.drawPoint(vertex.x, vertex.y, rgb(color), 15);
       buffer.batchImageDataOps(() => {
-        edge.render(buffer, color);
+        // edge.render(buffer, color);
         cutLine.addEdge(edge);
       });
       return;
     }
-    buffer.drawPoint(vertex.x, vertex.y, rgb(color), 5);
+    // buffer.drawPoint(vertex.x, vertex.y, rgb(color), 5);
     buffer.batchImageDataOps(() => {
-      edge.render(buffer, color);
+      // edge.render(buffer, color);
       cutLine.addEdge(edge);
     });
     seen.set(edge, true);

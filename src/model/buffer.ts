@@ -121,6 +121,10 @@ export class Buffer {
     this.fillRect(x, y, w, h, color);
   }
 
+  fill(color: string) {
+    this.fillRect(0, 0, this.width, this.height, color);
+  }
+
   strokeRect(
     x: number,
     y: number,

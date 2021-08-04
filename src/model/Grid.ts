@@ -1,6 +1,6 @@
 import { Graphics } from './graphics';
 import { Buffer } from './buffer';
-import { Color, Rect } from './util';
+import { Color, createElement, px, Rect } from './util';
 import { CutLine } from './cutLine';
 
 export enum Buffers {
@@ -28,13 +28,19 @@ export class Grid {
   graphics: Graphics;
   vertexMap: Map<string, Vertex> = new Map();
   edgeMap: Map<string, Edge> = new Map();
+  spritesContainer: HTMLDivElement;
 
-  constructor(hDivisions: number, vDivisions: number) {
+  constructor(
+    hDivisions: number,
+    vDivisions: number,
+    spritesContainer: HTMLDivElement
+  ) {
     this.hDivisions = hDivisions;
     this.vDivisions = vDivisions;
     this.graphics = new Graphics();
     this.graphics.createBuffer(Buffers.Grid);
     this.graphics.createBuffer(Buffers.Cuts);
+    this.spritesContainer = spritesContainer;
   }
 
   get minCellSize() {
@@ -193,6 +199,7 @@ export class Grid {
 
   renderGrid() {
     const buffer = this.graphics.getBuffer(Buffers.Grid);
+    buffer.fill('green');
     buffer.batchImageDataOps(() => {
       const { hDivisions, vDivisions } = this;
       for (let v = 0; v < vDivisions; v += 1) {
@@ -259,8 +266,8 @@ export class Grid {
       // buffer.fillRect(x, y, w, h, 'rgba(255,0,0,0.2)');
     } else {
       emptyCells.forEach((cell) => {
-        cell.isEmpty = true;
-        cell.render(buffer, 'rgba(0,255,0,0.5)');
+        cell.cut();
+        // cell.render(buffer, 'rgba(0,255,0,0.5)');
       });
     }
     cutLine.uncutEdges();
@@ -478,6 +485,7 @@ export class Cell {
   right: Edge;
   bottom: Edge;
   isEmpty: boolean = false;
+  sprite?: HTMLDivElement;
 
   constructor(top: Edge, left: Edge, right: Edge, bottom: Edge) {
     this.top = top;
@@ -510,6 +518,32 @@ export class Cell {
       topRight.x - topLeft.x,
       bottomRight.y - topRight.y,
     ];
+  }
+
+  cut() {
+    this.isEmpty = true;
+    const sprite = (this.sprite = createElement<HTMLDivElement>(
+      'div',
+      undefined,
+      ['sprite', 'cell']
+    ));
+    const [x, y, w, h] = this.bounds;
+    const grid = this.left.grid;
+    sprite.style.left = px(x);
+    sprite.style.top = px(y);
+    sprite.style.width = px(w);
+    sprite.style.height = px(h);
+    grid.spritesContainer.appendChild(this.sprite);
+    grid.graphics.getBuffer(Buffers.Grid).fillRect(x, y, w, h, 'black');
+    setTimeout(() => {
+      sprite.style.left = px(x + w / 2);
+      sprite.style.top = px(y + h / 2);
+      sprite.style.width = '0px';
+      sprite.style.height = '0px';
+      setTimeout(() => {
+        sprite.parentElement!.removeChild(sprite);
+      }, 2000);
+    }, Math.round(Math.random() * 250));
   }
 
   render(buffer: Buffer, fillColor?: string) {

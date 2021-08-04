@@ -61,6 +61,11 @@ canvas[data-buffer-name='cuts'] {
   position: absolute;
 }
 
+.sprite.cell {
+  background-color: green;
+  transition: all 2s ease-out;
+}
+
 .player {
   width: 10px;
   height: 10px;

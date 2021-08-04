@@ -18,6 +18,10 @@ export function createElement<T extends HTMLElement>(
   return element;
 }
 
+export function px(value: number) {
+  return `${value}px`;
+}
+
 export function randomColor(withAlpha: boolean = false): Color {
   const r = Math.round(Math.random() * 255);
   const g = Math.round(Math.random() * 255);
