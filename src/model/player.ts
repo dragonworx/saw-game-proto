@@ -36,6 +36,7 @@ export class Player extends EventEmitter {
     this.offset += Math.min(speed, grid.minCellSize);
     const hasLeftEdge = !edge.containsPosition(direction, this.offset);
     if (hasLeftEdge) {
+      let hasTurned = false;
       const toVertex = edge.getToVertex(direction);
       let overflow: number = isVertical
         ? this.offset - grid.cellHeight
@@ -52,24 +53,24 @@ export class Player extends EventEmitter {
       if (inputPeek) {
         if (isVertical) {
           if (direction === -1) {
-            this.turnIfCase([
+            hasTurned = this.turnIfCase([
               { keyCode: 'left', edge: edge.from.prev },
               { keyCode: 'right', edge: edge.from.next, direction: 1 },
             ]);
           } else if (direction === 1) {
-            this.turnIfCase([
+            hasTurned = this.turnIfCase([
               { keyCode: 'left', edge: edge.to.prev, direction: -1 },
               { keyCode: 'right', edge: edge.to.next },
             ]);
           }
         } else if (isHorizontal) {
           if (direction === -1) {
-            this.turnIfCase([
+            hasTurned = this.turnIfCase([
               { keyCode: 'up', edge: edge.from.above },
               { keyCode: 'down', edge: edge.from.below, direction: 1 },
             ]);
           } else if (direction === 1) {
-            this.turnIfCase([
+            hasTurned = this.turnIfCase([
               { keyCode: 'up', edge: edge.to.above, direction: -1 },
               { keyCode: 'down', edge: edge.to.below },
             ]);
@@ -79,14 +80,14 @@ export class Player extends EventEmitter {
         this.setEdge(edge.getNextWrappedEdge(direction));
       }
       this.offset = overflow;
+      this.checkForCrash(hasTurned);
     }
-    this.checkForCrash();
   }
 
-  checkForCrash() {
+  checkForCrash(hasTurned: boolean) {
     const { edge, direction } = this;
     const { isVertical, isHorizontal } = edge;
-    const cell = edge.getCell();
+    const cell = edge.getCell()!;
     const buffer = edge.grid.graphics.getBuffer(GridBuffers.Grid);
     if (isVertical) {
       const prevCell = edge.getPrevCell();
@@ -122,6 +123,7 @@ export class Player extends EventEmitter {
     ) {
       this.setEdge(edge.getNextWrappedEdge(direction));
     }
+    return false;
   }
 
   setEdge(edge: Edge, direction?: Direction) {

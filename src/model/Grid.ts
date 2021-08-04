@@ -185,6 +185,9 @@ export class Grid {
   }
 
   getCell(h: number, v: number) {
+    if (v >= this.cells.length || v < 0 || h < 0 || h >= this.hDivisions) {
+      return;
+    }
     return this.cells[v][h];
   }
 
@@ -226,15 +229,17 @@ export class Grid {
       let isEmpty = false;
       for (let h = gridHMin; h < gridHMax; h++) {
         cell = this.getCell(h, v);
-        if (
-          vertexes.has(cell.left.from) &&
-          vertexes.has(cell.left.to) &&
-          cell.left.isCut
-        ) {
-          isEmpty = !isEmpty;
-        }
-        if (isEmpty) {
-          emptyCells.add(cell);
+        if (cell) {
+          if (
+            vertexes.has(cell.left.from) &&
+            vertexes.has(cell.left.to) &&
+            cell.left.isCut
+          ) {
+            isEmpty = !isEmpty;
+          }
+          if (isEmpty) {
+            emptyCells.add(cell);
+          }
         }
       }
       if (
@@ -244,18 +249,22 @@ export class Grid {
       ) {
         for (let h = gridHMax; h >= gridHMin; h--) {
           cell = this.getCell(h, v);
-          emptyCells.delete(cell);
+          if (cell) {
+            emptyCells.delete(cell);
+          }
         }
       }
     }
     if (emptyCells.size === 0) {
       // buffer.fillRect(x, y, w, h, 'rgba(255,0,0,0.2)');
+    } else {
+      emptyCells.forEach((cell) => {
+        cell.isEmpty = true;
+        cell.render(buffer, 'rgba(0,255,0,0.5)');
+      });
     }
-    emptyCells.forEach((cell) => {
-      cell.isEmpty = true;
-      cell.render(buffer, 'rgba(0,255,0,0.1)');
-    });
     cutLine.uncutEdges();
+    return emptyCells;
   }
 }
 
