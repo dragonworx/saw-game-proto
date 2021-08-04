@@ -5,6 +5,7 @@ import { Edge, Direction, Buffers as GridBuffers, Vertex } from './grid';
 import { createElement, randomColor, rgb, Color } from './util';
 
 export const PlayerInitialSpeed = 7;
+export const PlayerCrashDamage = 5;
 
 export class Player extends EventEmitter {
   edge: Edge = {} as Edge;
@@ -13,6 +14,10 @@ export class Player extends EventEmitter {
   sprite: HTMLDivElement;
   inputChannel: InputChannel<InputChannelType>;
   speed: number = PlayerInitialSpeed;
+  score: number = 0;
+  health: number = 100;
+  lastX: number = 0;
+  lastY: number = 0;
 
   constructor(inputChannel: InputChannel<InputChannelType>) {
     super();
@@ -36,7 +41,6 @@ export class Player extends EventEmitter {
     this.offset += Math.min(speed, grid.minCellSize);
     const hasLeftEdge = !edge.containsPosition(direction, this.offset);
     if (hasLeftEdge) {
-      let hasTurned = false;
       const toVertex = edge.getToVertex(direction);
       let overflow: number = isVertical
         ? this.offset - grid.cellHeight
@@ -53,24 +57,24 @@ export class Player extends EventEmitter {
       if (inputPeek) {
         if (isVertical) {
           if (direction === -1) {
-            hasTurned = this.turnIfCase([
+            this.turnIfCase([
               { keyCode: 'left', edge: edge.from.prev },
               { keyCode: 'right', edge: edge.from.next, direction: 1 },
             ]);
           } else if (direction === 1) {
-            hasTurned = this.turnIfCase([
+            this.turnIfCase([
               { keyCode: 'left', edge: edge.to.prev, direction: -1 },
               { keyCode: 'right', edge: edge.to.next },
             ]);
           }
         } else if (isHorizontal) {
           if (direction === -1) {
-            hasTurned = this.turnIfCase([
+            this.turnIfCase([
               { keyCode: 'up', edge: edge.from.above },
               { keyCode: 'down', edge: edge.from.below, direction: 1 },
             ]);
           } else if (direction === 1) {
-            hasTurned = this.turnIfCase([
+            this.turnIfCase([
               { keyCode: 'up', edge: edge.to.above, direction: -1 },
               { keyCode: 'down', edge: edge.to.below },
             ]);
@@ -80,12 +84,45 @@ export class Player extends EventEmitter {
         this.setEdge(edge.getNextWrappedEdge(direction));
       }
       this.offset = overflow;
-      this.checkForCrash(hasTurned);
+      this.checkForCrash();
+      const vertex = edge.getToVertex(direction);
+      const buffer = edge.grid.graphics.getBuffer(GridBuffers.Cuts);
+      buffer.batchImageDataOps(() => {
+        buffer.drawStraightLine(
+          this.lastX,
+          this.lastY,
+          vertex.x,
+          vertex.y,
+          [255, 255, 255]
+        );
+      });
     }
+    const [x, y] = this.edge.getPosition(this.direction, this.offset);
+    this.lastX = x;
+    this.lastY = y;
   }
 
-  checkForCrash(hasTurned: boolean) {
-    const { edge, direction } = this;
+  turnIfCase(cases: TurnCase[]) {
+    const { inputChannel, edge, direction } = this;
+    const inputPeek = inputChannel.peek();
+    let hasTurned = false;
+    if (
+      cases.findIndex(({ keyCode, edge, direction }) => {
+        if (keyCode === inputPeek) {
+          if (edge) {
+            this.setEdge(edge, direction);
+            return (hasTurned = true);
+          }
+        }
+      }) === -1
+    ) {
+      this.setEdge(edge.getNextWrappedEdge(direction));
+    }
+    return hasTurned;
+  }
+
+  checkForCrash() {
+    const { edge } = this;
     const { isVertical, isHorizontal } = edge;
     const cell = edge.getCell()!;
     const buffer = edge.grid.graphics.getBuffer(GridBuffers.Grid);
@@ -95,6 +132,7 @@ export class Player extends EventEmitter {
         if (prevCell.isEmpty && cell.isEmpty) {
           buffer.fillBounds(cell.bounds, 'red');
           buffer.fillBounds(prevCell.bounds, 'red');
+          this.takeDamage(PlayerCrashDamage);
         }
       }
     } else if (isHorizontal) {
@@ -103,27 +141,21 @@ export class Player extends EventEmitter {
         if (aboveCell.isEmpty && cell.isEmpty) {
           buffer.fillBounds(cell.bounds, 'red');
           buffer.fillBounds(aboveCell.bounds, 'red');
+          this.takeDamage(PlayerCrashDamage);
         }
       }
     }
   }
 
-  turnIfCase(cases: TurnCase[]) {
-    const { inputChannel, edge, direction } = this;
-    const inputPeek = inputChannel.peek();
-    if (
-      cases.findIndex(({ keyCode, edge, direction }) => {
-        if (keyCode === inputPeek) {
-          if (edge) {
-            this.setEdge(edge, direction);
-            return true;
-          }
-        }
-      }) === -1
-    ) {
-      this.setEdge(edge.getNextWrappedEdge(direction));
+  takeDamage(damage: number) {
+    this.health = Math.max(0, this.health - damage);
+    if (this.health === 0) {
+      console.log('DEAD!');
     }
-    return false;
+  }
+
+  addScore(points: number) {
+    this.score += points;
   }
 
   setEdge(edge: Edge, direction?: Direction) {
@@ -158,17 +190,10 @@ export class Player extends EventEmitter {
 
   interset() {
     const { direction, edge } = this;
-    const { isVertical, grid } = edge;
+    const { grid } = edge;
     const buffer = grid.graphics.getBuffer(GridBuffers.Cuts);
     const toVertex = edge.getToVertex(direction);
-    const edgeA = isVertical ? toVertex.prev : toVertex.above;
-    const edgeB = isVertical ? toVertex.next : toVertex.below;
     buffer.drawPoint(toVertex.x, toVertex.y);
-    // buffer.batchImageDataOps(() => {
-    //   edgeA && edgeA.isCut && edgeA.render(buffer, [255, 255, 255]);
-    //   edgeB && edgeB.isCut && edgeB.render(buffer, [255, 255, 255]);
-    // });
-
     const seen: Map<Edge, boolean> = new Map();
     const color = randomColor();
     const cutLine: CutLine = new CutLine();
@@ -180,9 +205,8 @@ export class Player extends EventEmitter {
       color,
       cutLine
     );
-
-    grid.cutCells(cutLine);
-
+    const emptyCells = grid.cutCells(cutLine);
+    this.addScore(emptyCells.size);
     const gridBuffer = grid.graphics.getBuffer(GridBuffers.Grid);
     setTimeout(() => {
       buffer.batchImageDataOps(() => cutLine.render(buffer, [0, 0, 0, 0]));

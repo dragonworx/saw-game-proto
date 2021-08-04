@@ -5,7 +5,7 @@ import { createElement } from './util';
 import { Graphics } from './graphics';
 import { Grid, Direction, Buffers as GridBuffer } from './grid';
 
-export const GridSize = 50;
+export const GridSize = 10;
 
 export class Game {
   static instance: Game = new Game();
@@ -131,13 +131,6 @@ export class Game {
       player.setSpriteToCurrentPosition();
     });
     const cutsBuffer = this.grid.graphics.getBuffer(GridBuffer.Cuts);
-    // cutsBuffer.fillRect(
-    //   0,
-    //   0,
-    //   this.grid.width,
-    //   this.grid.height,
-    //   'rgba(0,0,0,0.01)'
-    // );
     cutsBuffer.batchImageDataOps(() => {
       this.players.forEach((player) => player.renderCurrentPosition());
     });
