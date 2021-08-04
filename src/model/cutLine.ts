@@ -1,7 +1,6 @@
-import Polygon from 'polygon';
-import { Direction, Edge, Vertex } from './grid';
+import { Edge } from './grid';
 import { Buffer } from './buffer';
-import { Color, randomColor, Rect } from './util';
+import { Color, Rect } from './util';
 
 export class CutLine {
   edges: Edge[] = [];
@@ -13,28 +12,6 @@ export class CutLine {
   addEdge(edge: Edge) {
     edge.isCut = true;
     this.edges.push(edge);
-  }
-
-  getIntersectionPolygon(vertex: Vertex) {
-    const vertexes: Set<Vertex> = new Set();
-    this.edges.forEach((edge) => {
-      vertexes.add(edge.to);
-      vertexes.add(edge.from);
-    });
-    const array = Array.from(vertexes);
-    const index = array.findIndex((vert) => vert === vertex);
-    const subVertexes = array.slice(index).map((vert) => [vert.x, vert.y]);
-    return new Polygon(subVertexes);
-  }
-
-  getPolygon() {
-    const vertexes: Set<Vertex> = new Set();
-    this.edges.forEach((edge) => {
-      vertexes.add(edge.to);
-      vertexes.add(edge.from);
-    });
-    const array = Array.from(vertexes).map((vert) => [vert.x, vert.y]);
-    return new Polygon(array);
   }
 
   uncutEdges() {

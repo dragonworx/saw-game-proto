@@ -1,6 +1,6 @@
 import { Graphics } from './graphics';
 import { Buffer } from './buffer';
-import { Color } from './util';
+import { Color, Rect } from './util';
 import { CutLine } from './cutLine';
 
 export enum Buffers {
@@ -220,11 +220,12 @@ export class Grid {
       vertexes.add(edge.from);
       vertexes.add(edge.to);
     });
-    buffer.fillRect(x, y, w, h, 'rgba(255,0,0,0.2)');
+    const emptyCells: Set<Cell> = new Set();
+    let cell: Cell | undefined;
     for (let v = gridVMin; v < gridVMax; v++) {
       let isEmpty = false;
       for (let h = gridHMin; h < gridHMax; h++) {
-        const cell = this.getCell(h, v);
+        cell = this.getCell(h, v);
         if (
           vertexes.has(cell.left.from) &&
           vertexes.has(cell.left.to) &&
@@ -233,11 +234,27 @@ export class Grid {
           isEmpty = !isEmpty;
         }
         if (isEmpty) {
-          cell.isEmpty = true;
-          cell.render(buffer, 'rgba(0,255,0,0.1)');
+          emptyCells.add(cell);
+        }
+      }
+      if (
+        isEmpty &&
+        (!vertexes.has(cell!.right.from) || !vertexes.has(cell!.right.to)) &&
+        !cell!.right.isCut
+      ) {
+        for (let h = gridHMax; h >= gridHMin; h--) {
+          cell = this.getCell(h, v);
+          emptyCells.delete(cell);
         }
       }
     }
+    if (emptyCells.size === 0) {
+      // buffer.fillRect(x, y, w, h, 'rgba(255,0,0,0.2)');
+    }
+    emptyCells.forEach((cell) => {
+      cell.isEmpty = true;
+      cell.render(buffer, 'rgba(0,255,0,0.1)');
+    });
     cutLine.uncutEdges();
   }
 }
@@ -419,6 +436,22 @@ export class Edge {
     return this.grid.getCell(this.h, this.v);
   }
 
+  getPrevCell() {
+    return this.grid.getCell(this.h - 1, this.v);
+  }
+
+  getNextCell() {
+    return this.grid.getCell(this.h + 1, this.v);
+  }
+
+  getAboveCell() {
+    return this.grid.getCell(this.h, this.v - 1);
+  }
+
+  getBelowCell() {
+    return this.grid.getCell(this.h, this.v + 1);
+  }
+
   render(buffer: Buffer, color: Color = [100, 100, 100]) {
     buffer.drawStraightLine(
       this.from.x,
@@ -460,20 +493,20 @@ export class Cell {
     return this.bottom.to;
   }
 
-  get bounds() {
+  get bounds(): Rect {
     const { topLeft, bottomRight, topRight } = this;
-    return {
-      x: topLeft.x,
-      y: topLeft.y,
-      width: topRight.x - topLeft.x,
-      height: bottomRight.y - topRight.y,
-    };
+    return [
+      topLeft.x,
+      topLeft.y,
+      topRight.x - topLeft.x,
+      bottomRight.y - topRight.y,
+    ];
   }
 
   render(buffer: Buffer, fillColor?: string) {
     if (fillColor) {
       buffer.updateImageData();
-      const { x, y, width, height } = this.bounds;
+      const [x, y, width, height] = this.bounds;
       buffer.fillRect(x, y, width, height, fillColor);
       buffer.getImageData();
     }

@@ -1,4 +1,4 @@
-import { Color, Point } from './util';
+import { Color, Point, Rect } from './util';
 
 export class Buffer {
   width: number;
@@ -114,6 +114,11 @@ export class Buffer {
     ctx.rect(x, y, width, height);
     ctx.closePath();
     ctx.fill();
+  }
+
+  fillBounds(bounds: Rect, color: string) {
+    const [x, y, w, h] = bounds;
+    this.fillRect(x, y, w, h, color);
   }
 
   strokeRect(

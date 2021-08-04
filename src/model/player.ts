@@ -2,7 +2,7 @@ import { EventEmitter } from 'eventemitter3';
 import { InputChannel, InputChannelType } from '../inputChannel';
 import { CutLine } from './cutLine';
 import { Edge, Direction, Buffers as GridBuffers, Vertex } from './grid';
-import { createElement, randomColor, rgb, Color, Point } from './util';
+import { createElement, randomColor, rgb, Color } from './util';
 
 export const PlayerInitialSpeed = 7;
 
@@ -35,7 +35,6 @@ export class Player extends EventEmitter {
     const inputPeek = inputChannel.peek();
     this.offset += Math.min(speed, grid.minCellSize);
     const hasLeftEdge = !edge.containsPosition(direction, this.offset);
-
     if (hasLeftEdge) {
       const toVertex = edge.getToVertex(direction);
       let overflow: number = isVertical
@@ -80,6 +79,31 @@ export class Player extends EventEmitter {
         this.setEdge(edge.getNextWrappedEdge(direction));
       }
       this.offset = overflow;
+    }
+    this.checkForCrash();
+  }
+
+  checkForCrash() {
+    const { edge, direction } = this;
+    const { isVertical, isHorizontal } = edge;
+    const cell = edge.getCell();
+    const buffer = edge.grid.graphics.getBuffer(GridBuffers.Grid);
+    if (isVertical) {
+      const prevCell = edge.getPrevCell();
+      if (prevCell) {
+        if (prevCell.isEmpty && cell.isEmpty) {
+          buffer.fillBounds(cell.bounds, 'red');
+          buffer.fillBounds(prevCell.bounds, 'red');
+        }
+      }
+    } else if (isHorizontal) {
+      const aboveCell = edge.getAboveCell();
+      if (aboveCell) {
+        if (aboveCell.isEmpty && cell.isEmpty) {
+          buffer.fillBounds(cell.bounds, 'red');
+          buffer.fillBounds(aboveCell.bounds, 'red');
+        }
+      }
     }
   }
 
